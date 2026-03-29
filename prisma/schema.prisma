@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 用户管理系统
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile Profile?
+  posts   Post[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model Profile {
+  id          String  @id @default(cuid())
+  displayName String?
+  bio         String?
+  avatar      String?
+
+  email    String?
+  phone    String?
+  wechat   String?
+  qq       String?
+
+  website  String?
+  github   String?
+  twitter  String?
+  weibo    String?
+  bilibili String?
+  youtube  String?
+
+  location String?
+  company  String?
+  position String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ============================================================================
+// 内容管理系统
+// ============================================================================
+
+model Post {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+
+  published   Boolean   @default(false)
+  featured    Boolean   @default(false)
+
+  views       Int       @default(0)
+  readingTime Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  tags       PostTag[]
+
+  vectorIndex PostVectorIndex?
+
+  images Image[]
+
+  @@map("posts")
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+
+  color     String?
+  icon      String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  color     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  id String @id @default(cuid())
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  tagId String
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, tagId])
+  @@map("post_tags")
+}
+
+// ============================================================================
+// AI 功能相关模型
+// ============================================================================
+
+model PostVectorIndex {
+  id         String   @id @default(cuid())
+  postId     String   @unique
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  vectorId   String?
+  chunkCount Int      @default(0)
+  indexedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("post_vector_indexes")
+  @@index([postId])
+}
+
+// ============================================================================
+// 图片管理系统
+// ============================================================================
+
+enum ImageType {
+  COVER
+  CONTENT
+}
+
+model Image {
+  id       String    @id @default(cuid())
+  filename String
+  path     String
+  size     Int
+  mimeType String
+  type     ImageType @default(CONTENT)
+
+  postId   String
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("images")
+  @@index([postId])
+  @@index([type])
+}

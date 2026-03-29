@@ -1,0 +1,167 @@
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log("🌱 开始数据库种子...");
+
+  // 创建默认管理员用户
+  const adminPassword = await bcrypt.hash(
+    process.env.ADMIN_PASSWORD || "admin123",
+    12
+  );
+
+  const adminUser = await prisma.user.upsert({
+    where: { username: process.env.ADMIN_USERNAME || "admin" },
+    update: {},
+    create: {
+      username: process.env.ADMIN_USERNAME || "admin",
+      password: adminPassword,
+      role: "ADMIN",
+      profile: {
+        create: {
+          displayName: "博主",
+          bio: "这里是博主的个人简介",
+          avatar: "/images/avatar.jpg",
+        },
+      },
+    },
+  });
+
+  console.log("✅ 创建管理员用户:", adminUser.username);
+
+  // 创建默认分类
+  const categories = [
+    {
+      name: "AI",
+      slug: "ai",
+      description: "人工智能、大模型、机器学习相关内容",
+      color: "#8B5CF6",
+      icon: "🤖",
+      sortOrder: 1,
+    },
+    {
+      name: "前端",
+      slug: "frontend",
+      description: "前端开发技术、框架、工具分享",
+      color: "#3B82F6",
+      icon: "🪷",
+      sortOrder: 2,
+    },
+    {
+      name: "编程",
+      slug: "programming",
+      description: "编程基础知识、算法、数据结构",
+      color: "#F59E0B",
+      icon: "🧮",
+      sortOrder: 3,
+    },
+    {
+      name: "随笔",
+      slug: "essays",
+      description: "生活感悟、思考随笔、日常记录",
+      color: "#14B8A6",
+      icon: "📝",
+      sortOrder: 4,
+    },
+  ];
+
+  for (const categoryData of categories) {
+    const category = await prisma.category.upsert({
+      where: { slug: categoryData.slug },
+      update: {
+        name: categoryData.name,
+        description: categoryData.description,
+        color: categoryData.color,
+        icon: categoryData.icon,
+        sortOrder: categoryData.sortOrder,
+      },
+      create: categoryData,
+    });
+    console.log("✅ 创建分类:", category.name);
+  }
+
+  // 创建示例标签
+  const tags = [
+    { name: "TypeScript", slug: "ts", color: "#3178C6" },
+    { name: "Next.js", slug: "nextjs", color: "#000000" },
+    { name: "React", slug: "react", color: "#61DAFB" },
+    { name: "Node.js", slug: "node", color: "#339933" },
+    { name: "Prisma", slug: "prisma", color: "#2D3748" },
+    { name: "Prompt", slug: "prompt", color: "#FF6B6B" },
+    { name: "RAG", slug: "rag", color: "#9B59B6" },
+    { name: "Agent", slug: "agent", color: "#E74C3C" },
+  ];
+
+  for (const tagData of tags) {
+    const tag = await prisma.tag.upsert({
+      where: { slug: tagData.slug },
+      update: { name: tagData.name, color: tagData.color },
+      create: tagData,
+    });
+    console.log("✅ 创建标签:", tag.name);
+  }
+
+  // 创建欢迎文章
+  const aiCategory = await prisma.category.findUnique({ where: { slug: "ai" } });
+  const nextjsTag = await prisma.tag.findUnique({ where: { slug: "nextjs" } });
+  const tsTag = await prisma.tag.findUnique({ where: { slug: "ts" } });
+
+  if (aiCategory) {
+    const welcomePost = await prisma.post.upsert({
+      where: { slug: "welcome-to-my-blog" },
+      update: {},
+      create: {
+        title: "欢迎来到我的博客",
+        slug: "welcome-to-my-blog",
+        content: `# 欢迎来到我的博客 👋
+
+这是一个基于 **Next.js** 和 **Prisma** 构建的全栈 AI 博客系统。
+
+## 功能特性
+
+- 📝 **Markdown 编辑器**：支持富文本编辑
+- 🤖 **AI 写作助手**：集成 AI 功能辅助创作
+- 🔍 **RAG 智能问答**：基于文章内容的智能对话
+- 🏷️ **分类标签**：灵活的内容组织方式
+- 🖼️ **图片管理**：完善的图片上传系统
+
+欢迎探索，Happy Coding! 🚀`,
+        excerpt: "欢迎来到这个基于 Next.js 构建的 AI 博客系统，支持 AI 写作助手和 RAG 智能问答。",
+        published: true,
+        featured: true,
+        categoryId: aiCategory.id,
+        authorId: adminUser.id,
+      },
+    });
+    console.log("✅ 创建文章:", welcomePost.title);
+
+    if (nextjsTag) {
+      await prisma.postTag.upsert({
+        where: { postId_tagId: { postId: welcomePost.id, tagId: nextjsTag.id } },
+        update: {},
+        create: { postId: welcomePost.id, tagId: nextjsTag.id },
+      });
+    }
+    if (tsTag) {
+      await prisma.postTag.upsert({
+        where: { postId_tagId: { postId: welcomePost.id, tagId: tsTag.id } },
+        update: {},
+        create: { postId: welcomePost.id, tagId: tsTag.id },
+      });
+    }
+  }
+
+  console.log("🎉 数据库种子完成!");
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
