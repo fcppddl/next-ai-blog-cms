@@ -1,0 +1,309 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getAIClient, type ChatMessage } from "@/lib/ai/client";
+import {
+  buildCompanionSystemPrompt,
+  buildRAGSystemPrompt,
+  getAuthorSummary,
+  getPublicArticleMeta,
+  type CompanionMode,
+  type RetrievedChunk,
+} from "@/lib/ai/companion";
+import { getVectorStore } from "@/lib/vector/store";
+
+interface CompanionHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface CompanionArticleContext {
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  tags: string[];
+}
+
+const MAX_USER_MESSAGE_LENGTH = 2000;
+const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_MESSAGE_LENGTH = 1200;
+const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
+const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
+const RAG_TOP_K = 5;
+
+function isCompanionMode(value: unknown): value is CompanionMode {
+  return value === "articles" || value === "author" || value === "free";
+}
+
+function normalizeText(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function normalizeHistory(value: unknown): CompanionHistoryMessage[] {
+  if (!Array.isArray(value)) return [];
+
+  const normalized: CompanionHistoryMessage[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const role = (item as { role?: unknown }).role;
+    if (role !== "user" && role !== "assistant") continue;
+    const content = normalizeText((item as { content?: unknown }).content, MAX_HISTORY_MESSAGE_LENGTH);
+    if (!content) continue;
+    normalized.push({ role, content });
+  }
+  return normalized.slice(-MAX_HISTORY_MESSAGES);
+}
+
+function normalizeArticleContext(value: unknown): CompanionArticleContext | null {
+  if (!value || typeof value !== "object") return null;
+
+  const context = value as {
+    slug?: unknown;
+    title?: unknown;
+    excerpt?: unknown;
+    content?: unknown;
+    category?: unknown;
+    tags?: unknown;
+  };
+
+  const slug = normalizeText(context.slug, 120);
+  const title = normalizeText(context.title, 160);
+  if (!slug || !title) return null;
+
+  const tags = Array.isArray(context.tags)
+    ? context.tags.map((item) => (typeof item === "string" ? item.trim().slice(0, 30) : "")).filter(Boolean).slice(0, 8)
+    : [];
+
+  return {
+    slug,
+    title,
+    excerpt: normalizeText(context.excerpt, 400),
+    content: normalizeText(context.content, 3200),
+    category: normalizeText(context.category, 50),
+    tags,
+  };
+}
+
+function formatSSEEvent(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message || "请求失败，请稍后重试";
+  return "请求失败，请稍后重试";
+}
+
+// 尝试向量检索，失败则返回 null（降级）
+async function tryVectorSearch(
+  query: string,
+  aiClient: ReturnType<typeof getAIClient>
+): Promise<RetrievedChunk[] | null> {
+  try {
+    const embeddings = await aiClient.embed(query);
+    if (!embeddings.length || !embeddings[0].length) return null;
+
+    const vectorStore = getVectorStore();
+    const results = await vectorStore.search(embeddings[0], { limit: RAG_TOP_K });
+
+    if (!results.length) return null;
+
+    return results.map((r) => ({
+      id: r.id,
+      document: r.document || "",
+      score: r.score,
+      metadata: {
+        postId: typeof r.metadata.postId === "string" ? r.metadata.postId : undefined,
+        title: typeof r.metadata.title === "string" ? r.metadata.title : undefined,
+        slug: typeof r.metadata.slug === "string" ? r.metadata.slug : undefined,
+        category: typeof r.metadata.category === "string" ? r.metadata.category : undefined,
+        tags: typeof r.metadata.tags === "string" ? r.metadata.tags : undefined,
+        chunkIndex: typeof r.metadata.chunkIndex === "number" ? r.metadata.chunkIndex : undefined,
+      },
+    }));
+  } catch (error) {
+    console.warn("[RAG] 向量检索失败，降级到元信息模式:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
+  }
+
+  const mode = (body as { mode?: unknown })?.mode;
+  const message = normalizeText((body as { message?: unknown })?.message, MAX_USER_MESSAGE_LENGTH);
+  const history = normalizeHistory((body as { history?: unknown })?.history);
+  const articleContext = normalizeArticleContext((body as { articleContext?: unknown })?.articleContext);
+
+  if (!isCompanionMode(mode)) {
+    return NextResponse.json({ error: "mode 必须是 articles / author / free" }, { status: 400 });
+  }
+  if (!message) {
+    return NextResponse.json({ error: "message 不能为空" }, { status: 400 });
+  }
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let closed = false;
+      let bufferedChunk = "";
+      let chunkFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearChunkFlushTimer = () => {
+        if (chunkFlushTimer === null) return;
+        clearTimeout(chunkFlushTimer);
+        chunkFlushTimer = null;
+      };
+
+      const close = () => {
+        clearChunkFlushTimer();
+        if (!closed) {
+          closed = true;
+          controller.close();
+        }
+      };
+
+      const sendEvent = (event: string, data: unknown) => {
+        if (closed || request.signal.aborted) return;
+        controller.enqueue(encoder.encode(formatSSEEvent(event, data)));
+      };
+
+      const flushBufferedChunk = () => {
+        clearChunkFlushTimer();
+        if (!bufferedChunk) return;
+        sendEvent("chunk", { content: bufferedChunk });
+        bufferedChunk = "";
+      };
+
+      const scheduleChunkFlush = () => {
+        if (chunkFlushTimer !== null || closed || request.signal.aborted) return;
+        chunkFlushTimer = setTimeout(() => {
+          chunkFlushTimer = null;
+          flushBufferedChunk();
+        }, STREAM_CHUNK_FLUSH_INTERVAL_MS);
+      };
+
+      const handleAbort = () => close();
+      request.signal.addEventListener("abort", handleAbort);
+
+      try {
+        sendEvent("start", { mode, startedAt: new Date().toISOString() });
+
+        const aiClient = getAIClient();
+
+        // 并行：获取作者信息 + 文章元信息 + 尝试向量检索
+        const [articles, author, ragChunks] = await Promise.all([
+          getPublicArticleMeta(),
+          getAuthorSummary(),
+          tryVectorSearch(message, aiClient),
+        ]);
+
+        const usingRAG = ragChunks !== null && ragChunks.length > 0;
+
+        sendEvent("context", {
+          articleCount: articles.length,
+          author: author.displayName,
+          hasArticleContext: Boolean(articleContext),
+          ragEnabled: usingRAG,
+          ragChunkCount: ragChunks?.length ?? 0,
+        });
+
+        // 构建系统提示词：RAG 模式 or 降级元信息模式
+        let systemPrompt = usingRAG
+          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks, totalArticles: articles.length })
+          : buildCompanionSystemPrompt({ mode, author, articles });
+
+        // 文章详情页：注入当前页面上下文（仍保留）
+        if (articleContext) {
+          const tagText = articleContext.tags.length > 0 ? articleContext.tags.join("、") : "无";
+          systemPrompt += `
+
+【当前页面文章（优先参考）】
+- 标题：${articleContext.title}
+- slug：${articleContext.slug}
+- 分类：${articleContext.category || "未分类"}
+- 标签：${tagText}
+- 摘要：${articleContext.excerpt || "无"}
+- 正文节选：${articleContext.content || "无"}
+
+【当前页面回答约束】
+如果用户问题与当前页面文章有关，请优先基于这篇文章回答。`;
+        }
+
+        const messages: ChatMessage[] = [
+          { role: "system", content: systemPrompt },
+          ...history.map((item) => ({ role: item.role, content: item.content })),
+          { role: "user", content: message },
+        ];
+
+        let streamedContent = "";
+
+        const response = await aiClient.chatStream(
+          messages,
+          {
+            temperature: mode === "free" ? 0.8 : 0.6,
+            maxTokens: 1000,
+            signal: request.signal,
+          },
+          (chunk) => {
+            streamedContent += chunk;
+            bufferedChunk += chunk;
+
+            if (bufferedChunk.length >= STREAM_CHUNK_FLUSH_MIN_CHARS) {
+              flushBufferedChunk();
+              return;
+            }
+            scheduleChunkFlush();
+          }
+        );
+
+        flushBufferedChunk();
+
+        // 整理来源：去重 slug，附带在 done 事件里
+        const sources = usingRAG
+          ? Array.from(
+              ragChunks.reduce((map, chunk) => {
+                const slug = chunk.metadata.slug;
+                if (slug && !map.has(slug)) {
+                  map.set(slug, { slug, title: chunk.metadata.title || slug });
+                }
+                return map;
+              }, new Map<string, { slug: string; title: string }>())
+            ).map(([, v]) => v)
+          : [];
+
+        sendEvent("done", {
+          content: response.content || streamedContent,
+          tokensUsed: response.tokensUsed,
+          finishedAt: new Date().toISOString(),
+          ragEnabled: usingRAG,
+          sources,
+        });
+      } catch (error) {
+        if (!request.signal.aborted) {
+          flushBufferedChunk();
+          console.error("AI 看板娘流式对话失败:", error);
+          sendEvent("error", { message: getErrorMessage(error) });
+        }
+      } finally {
+        request.signal.removeEventListener("abort", handleAbort);
+        close();
+      }
+    },
+  });
+
+  return new NextResponse(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}

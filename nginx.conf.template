@@ -1,0 +1,49 @@
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # 禁用所有缓存
+    proxy_cache off;
+    proxy_buffering off;
+
+    # Next.js 静态资源
+    location /_next/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+    }
+
+    # Next.js 应用代理
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+
+        # SSE 流式响应支持
+        proxy_read_timeout 86400;
+    }
+
+    access_log /var/log/nginx/blog.access.log;
+    error_log /var/log/nginx/blog.error.log;
+}
