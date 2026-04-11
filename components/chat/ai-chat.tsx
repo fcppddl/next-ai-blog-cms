@@ -31,6 +31,10 @@ interface ChatMessage {
   content: string;
   isError?: boolean;
   sources?: MessageSource[];
+  /** 本轮是否走了向量检索（服务端注入片段） */
+  ragEnabled?: boolean;
+  /** 模型声明是否依据了站内文章 */
+  ragUsed?: boolean;
 }
 
 interface ArticleContext {
@@ -204,7 +208,10 @@ export default function AIChatWidget() {
   const chunkBufRef = useRef("");
   const flushTimerRef = useRef<number | null>(null);
 
-  // Persistence
+  /** 避免首帧 messages=[] 在从 localStorage 恢复前把存储覆盖成空 */
+  const skipInitialPersist = useRef(true);
+
+  // Persistence：挂载后从 localStorage 恢复（避免 SSR 与客户端首帧不一致）
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -221,7 +228,17 @@ export default function AIChatWidget() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-MAX_STORED) }));
+    if (skipInitialPersist.current) {
+      skipInitialPersist.current = false;
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ messages: messages.slice(-MAX_STORED) }),
+      );
+    } catch { /* ignore */ }
   }, [messages]);
 
   // Auto-scroll
@@ -342,10 +359,14 @@ export default function AIChatWidget() {
             .filter((s): s is MessageSource =>
               !!s && typeof (s as MessageSource).slug === "string" && typeof (s as MessageSource).title === "string",
             );
+          const ragEnabled = payload?.ragEnabled === true;
+          const ragUsed = payload?.ragUsed === true;
           updateMsg((m) => ({
             ...m,
-            content: m.content || final,
-            ...(sources.length ? { sources } : {}),
+            content: final || m.content,
+            ...(sources.length > 0 ? { sources } : { sources: undefined }),
+            ragEnabled,
+            ragUsed,
           }));
         } else if (event === "error") {
           throw new Error(typeof payload?.message === "string" ? payload.message : "AI 助手处理失败");
@@ -481,7 +502,17 @@ export default function AIChatWidget() {
                         <MsgMarkdown content={msg.content} />
                         {msg.sources && msg.sources.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-border/40">
-                            <p className="text-[10px] text-muted-foreground mb-1.5">参考来源</p>
+                            <p className="text-[10px] text-muted-foreground mb-1.5 flex flex-wrap items-center gap-1.5">
+                              <span>参考来源</span>
+                              {msg.ragEnabled && (
+                                <span className="rounded bg-muted px-1.5 py-px text-[9px] font-medium">检索</span>
+                              )}
+                              {msg.ragUsed && (
+                                <span className="rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 px-1.5 py-px text-[9px] font-medium">
+                                  模型引用
+                                </span>
+                              )}
+                            </p>
                             <div className="flex flex-wrap gap-1.5">
                               {msg.sources.map((s) => (
                                 <Link

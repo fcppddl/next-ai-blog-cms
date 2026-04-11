@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAIClient, type ChatMessage } from "@/lib/ai/client";
 import {
+  ASSISTANT_RAG_META_MARKER,
   buildCompanionSystemPrompt,
   buildRAGSystemPrompt,
   getAuthorSummary,
   getPublicArticleMeta,
+  parseAssistantRagMeta,
+  visibleFinalPrefixLen,
+  visibleStreamingPrefixLen,
   type CompanionMode,
   type RetrievedChunk,
 } from "@/lib/ai/companion";
@@ -243,46 +247,81 @@ export async function POST(request: NextRequest) {
         ];
 
         let streamedContent = "";
+        let lastVisibleSentLen = 0;
 
         const response = await aiClient.chatStream(
           messages,
           {
             temperature: mode === "free" ? 0.8 : 0.6,
-            maxTokens: 1000,
+            maxTokens: 1100,
             signal: request.signal,
           },
           (chunk) => {
             streamedContent += chunk;
-            bufferedChunk += chunk;
+            const visEnd = visibleStreamingPrefixLen(streamedContent, ASSISTANT_RAG_META_MARKER);
+            const visible = streamedContent.slice(0, visEnd);
+            const delta = visible.slice(lastVisibleSentLen);
+            lastVisibleSentLen = visible.length;
+            if (!delta) return;
+            bufferedChunk += delta;
 
             if (bufferedChunk.length >= STREAM_CHUNK_FLUSH_MIN_CHARS) {
               flushBufferedChunk();
               return;
             }
             scheduleChunkFlush();
-          }
+          },
         );
 
+        const finalVisEnd = visibleFinalPrefixLen(streamedContent, ASSISTANT_RAG_META_MARKER);
+        const finalVisible = streamedContent.slice(0, finalVisEnd);
+        const tailDelta = finalVisible.slice(lastVisibleSentLen);
+        lastVisibleSentLen = finalVisible.length;
+        if (tailDelta) bufferedChunk += tailDelta;
         flushBufferedChunk();
 
-        // 整理来源：去重 slug，附带在 done 事件里
-        const sources = usingRAG
-          ? Array.from(
-              ragChunks.reduce((map, chunk) => {
-                const slug = chunk.metadata.slug;
-                if (slug && !map.has(slug)) {
-                  map.set(slug, { slug, title: chunk.metadata.title || slug });
-                }
-                return map;
-              }, new Map<string, { slug: string; title: string }>())
-            ).map(([, v]) => v)
-          : [];
+        const rawFull = (response.content || streamedContent).trimEnd();
+        const parsed = parseAssistantRagMeta(rawFull);
+
+        const serverFallbackSources =
+          usingRAG && ragChunks
+            ? Array.from(
+                ragChunks.reduce((map, chunk) => {
+                  const slug = chunk.metadata.slug;
+                  if (slug && !map.has(slug)) {
+                    map.set(slug, { slug, title: chunk.metadata.title || slug });
+                  }
+                  return map;
+                }, new Map<string, { slug: string; title: string }>()),
+              ).map(([, v]) => v)
+            : [];
+
+        // 解析成功时完全信任模型：ragUsed 为 false 则不展示参考列表；不为 articles 使用向量兜底。
+        // 仅当 __RAG_META__ 解析失败（parseOk 为 false）时，才用检索结果作为兜底列表。
+        let sources: Array<{ slug: string; title: string }> = [];
+        if (parsed.parseOk) {
+          if (parsed.ragUsed && parsed.articles.length > 0) {
+            sources = parsed.articles;
+          }
+        } else if (serverFallbackSources.length > 0) {
+          sources = serverFallbackSources;
+        }
+
+        const displayContent = parsed.parseOk
+          ? parsed.displayText
+          : (() => {
+              const idx = rawFull.indexOf(ASSISTANT_RAG_META_MARKER);
+              return idx === -1 ? rawFull : rawFull.slice(0, idx).trimEnd();
+            })();
+
+        const ragUsedOut = parsed.parseOk ? parsed.ragUsed : false;
 
         sendEvent("done", {
-          content: response.content || streamedContent,
+          content: displayContent,
           tokensUsed: response.tokensUsed,
           finishedAt: new Date().toISOString(),
           ragEnabled: usingRAG,
+          ragUsed: ragUsedOut,
           sources,
         });
       } catch (error) {
