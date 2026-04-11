@@ -23,7 +23,7 @@ async function main() {
         create: {
           displayName: "博主",
           bio: "这里是博主的个人简介",
-          avatar: "/images/avatar.jpg",
+          avatar: "/images/avatar.jpeg",
         },
       },
     },

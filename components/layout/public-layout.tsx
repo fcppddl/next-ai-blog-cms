@@ -52,9 +52,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             ))}
             <Link
               href="/admin"
-              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/90"
             >
-              <PenSquare className="h-3.5 w-3.5" />
+              <PenSquare className="h-3.5 w-3.5 shrink-0" aria-hidden />
               管理
             </Link>
             <ThemeToggle />
@@ -88,13 +88,16 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                   {link.label}
                 </Link>
               ))}
+              {/* AIGC START */}
               <Link
                 href="/admin"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/90"
                 onClick={() => setMenuOpen(false)}
               >
+                <PenSquare className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 管理后台
               </Link>
+              {/* AIGC END */}
             </nav>
           </div>
         )}
