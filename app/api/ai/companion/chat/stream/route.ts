@@ -33,7 +33,7 @@ const MAX_HISTORY_MESSAGES = 12;
 const MAX_HISTORY_MESSAGE_LENGTH = 1200;
 const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
 const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
-const RAG_TOP_K = 5;
+const RAG_TOP_K = 3;
 
 function isCompanionMode(value: unknown): value is CompanionMode {
   return value === "articles" || value === "author" || value === "free";
@@ -52,14 +52,19 @@ function normalizeHistory(value: unknown): CompanionHistoryMessage[] {
     if (!item || typeof item !== "object") continue;
     const role = (item as { role?: unknown }).role;
     if (role !== "user" && role !== "assistant") continue;
-    const content = normalizeText((item as { content?: unknown }).content, MAX_HISTORY_MESSAGE_LENGTH);
+    const content = normalizeText(
+      (item as { content?: unknown }).content,
+      MAX_HISTORY_MESSAGE_LENGTH,
+    );
     if (!content) continue;
     normalized.push({ role, content });
   }
   return normalized.slice(-MAX_HISTORY_MESSAGES);
 }
 
-function normalizeArticleContext(value: unknown): CompanionArticleContext | null {
+function normalizeArticleContext(
+  value: unknown,
+): CompanionArticleContext | null {
   if (!value || typeof value !== "object") return null;
 
   const context = value as {
@@ -76,7 +81,12 @@ function normalizeArticleContext(value: unknown): CompanionArticleContext | null
   if (!slug || !title) return null;
 
   const tags = Array.isArray(context.tags)
-    ? context.tags.map((item) => (typeof item === "string" ? item.trim().slice(0, 30) : "")).filter(Boolean).slice(0, 8)
+    ? context.tags
+        .map((item) =>
+          typeof item === "string" ? item.trim().slice(0, 30) : "",
+        )
+        .filter(Boolean)
+        .slice(0, 8)
     : [];
 
   return {
@@ -101,14 +111,16 @@ function getErrorMessage(error: unknown): string {
 // 尝试向量检索，失败则返回 null（降级）
 async function tryVectorSearch(
   query: string,
-  aiClient: ReturnType<typeof getAIClient>
+  aiClient: ReturnType<typeof getAIClient>,
 ): Promise<RetrievedChunk[] | null> {
   try {
     const embeddings = await aiClient.embed(query);
     if (!embeddings.length || !embeddings[0].length) return null;
 
     const vectorStore = getVectorStore();
-    const results = await vectorStore.search(embeddings[0], { limit: RAG_TOP_K });
+    const results = await vectorStore.search(embeddings[0], {
+      limit: RAG_TOP_K,
+    });
 
     if (!results.length) return null;
 
@@ -117,16 +129,27 @@ async function tryVectorSearch(
       document: r.document || "",
       score: r.score,
       metadata: {
-        postId: typeof r.metadata.postId === "string" ? r.metadata.postId : undefined,
-        title: typeof r.metadata.title === "string" ? r.metadata.title : undefined,
+        postId:
+          typeof r.metadata.postId === "string" ? r.metadata.postId : undefined,
+        title:
+          typeof r.metadata.title === "string" ? r.metadata.title : undefined,
         slug: typeof r.metadata.slug === "string" ? r.metadata.slug : undefined,
-        category: typeof r.metadata.category === "string" ? r.metadata.category : undefined,
+        category:
+          typeof r.metadata.category === "string"
+            ? r.metadata.category
+            : undefined,
         tags: typeof r.metadata.tags === "string" ? r.metadata.tags : undefined,
-        chunkIndex: typeof r.metadata.chunkIndex === "number" ? r.metadata.chunkIndex : undefined,
+        chunkIndex:
+          typeof r.metadata.chunkIndex === "number"
+            ? r.metadata.chunkIndex
+            : undefined,
       },
     }));
   } catch (error) {
-    console.warn("[RAG] 向量检索失败，降级到元信息模式:", error instanceof Error ? error.message : error);
+    console.warn(
+      "[RAG] 向量检索失败，降级到元信息模式:",
+      error instanceof Error ? error.message : error,
+    );
     return null;
   }
 }
@@ -140,12 +163,20 @@ export async function POST(request: NextRequest) {
   }
 
   const mode = (body as { mode?: unknown })?.mode;
-  const message = normalizeText((body as { message?: unknown })?.message, MAX_USER_MESSAGE_LENGTH);
+  const message = normalizeText(
+    (body as { message?: unknown })?.message,
+    MAX_USER_MESSAGE_LENGTH,
+  );
   const history = normalizeHistory((body as { history?: unknown })?.history);
-  const articleContext = normalizeArticleContext((body as { articleContext?: unknown })?.articleContext);
+  const articleContext = normalizeArticleContext(
+    (body as { articleContext?: unknown })?.articleContext,
+  );
 
   if (!isCompanionMode(mode)) {
-    return NextResponse.json({ error: "mode 必须是 articles / author / free" }, { status: 400 });
+    return NextResponse.json(
+      { error: "mode 必须是 articles / author / free" },
+      { status: 400 },
+    );
   }
   if (!message) {
     return NextResponse.json({ error: "message 不能为空" }, { status: 400 });
@@ -186,7 +217,8 @@ export async function POST(request: NextRequest) {
       };
 
       const scheduleChunkFlush = () => {
-        if (chunkFlushTimer !== null || closed || request.signal.aborted) return;
+        if (chunkFlushTimer !== null || closed || request.signal.aborted)
+          return;
         chunkFlushTimer = setTimeout(() => {
           chunkFlushTimer = null;
           flushBufferedChunk();
@@ -220,12 +252,15 @@ export async function POST(request: NextRequest) {
 
         // 构建系统提示词：RAG 模式 or 降级元信息模式
         let systemPrompt = usingRAG
-          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks, totalArticles: articles.length })
+          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks })
           : buildCompanionSystemPrompt({ mode, author, articles });
 
         // 文章详情页：注入当前页面上下文（仍保留）
         if (articleContext) {
-          const tagText = articleContext.tags.length > 0 ? articleContext.tags.join("、") : "无";
+          const tagText =
+            articleContext.tags.length > 0
+              ? articleContext.tags.join("、")
+              : "无";
           systemPrompt += `
 
 【当前页面文章（优先参考）】
@@ -242,12 +277,16 @@ export async function POST(request: NextRequest) {
 
         const messages: ChatMessage[] = [
           { role: "system", content: systemPrompt },
-          ...history.map((item) => ({ role: item.role, content: item.content })),
+          ...history.map((item) => ({
+            role: item.role,
+            content: item.content,
+          })),
           { role: "user", content: message },
         ];
 
         let streamedContent = "";
         let lastVisibleSentLen = 0;
+        console.log("systemPrompt", message, systemPrompt);
 
         const response = await aiClient.chatStream(
           messages,
@@ -258,7 +297,10 @@ export async function POST(request: NextRequest) {
           },
           (chunk) => {
             streamedContent += chunk;
-            const visEnd = visibleStreamingPrefixLen(streamedContent, ASSISTANT_RAG_META_MARKER);
+            const visEnd = visibleStreamingPrefixLen(
+              streamedContent,
+              ASSISTANT_RAG_META_MARKER,
+            );
             const visible = streamedContent.slice(0, visEnd);
             const delta = visible.slice(lastVisibleSentLen);
             lastVisibleSentLen = visible.length;
@@ -272,8 +314,12 @@ export async function POST(request: NextRequest) {
             scheduleChunkFlush();
           },
         );
+        console.log("streamedContent", streamedContent);
 
-        const finalVisEnd = visibleFinalPrefixLen(streamedContent, ASSISTANT_RAG_META_MARKER);
+        const finalVisEnd = visibleFinalPrefixLen(
+          streamedContent,
+          ASSISTANT_RAG_META_MARKER,
+        );
         const finalVisible = streamedContent.slice(0, finalVisEnd);
         const tailDelta = finalVisible.slice(lastVisibleSentLen);
         lastVisibleSentLen = finalVisible.length;
@@ -289,7 +335,10 @@ export async function POST(request: NextRequest) {
                 ragChunks.reduce((map, chunk) => {
                   const slug = chunk.metadata.slug;
                   if (slug && !map.has(slug)) {
-                    map.set(slug, { slug, title: chunk.metadata.title || slug });
+                    map.set(slug, {
+                      slug,
+                      title: chunk.metadata.title || slug,
+                    });
                   }
                   return map;
                 }, new Map<string, { slug: string; title: string }>()),
@@ -307,12 +356,7 @@ export async function POST(request: NextRequest) {
           sources = serverFallbackSources;
         }
 
-        const displayContent = parsed.parseOk
-          ? parsed.displayText
-          : (() => {
-              const idx = rawFull.indexOf(ASSISTANT_RAG_META_MARKER);
-              return idx === -1 ? rawFull : rawFull.slice(0, idx).trimEnd();
-            })();
+        const displayContent = parsed.displayText;
 
         const ragUsedOut = parsed.parseOk ? parsed.ragUsed : false;
 

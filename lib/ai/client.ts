@@ -5,7 +5,7 @@ export interface AIClient {
   chatStream(
     messages: ChatMessage[],
     options?: ChatOptions,
-    onChunk?: (chunk: string) => void
+    onChunk?: (chunk: string) => void,
   ): Promise<ChatResponse>;
   embed(text: string | string[]): Promise<number[][]>;
 }
@@ -31,7 +31,7 @@ async function getEmbeddingWithRetry(
   baseUrl: string,
   model: string,
   text: string,
-  maxRetries: number
+  maxRetries: number,
 ): Promise<number[]> {
   let retries = maxRetries;
   let lastError: Error | null = null;
@@ -52,7 +52,9 @@ async function getEmbeddingWithRetry(
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Ollama embedding 失败: ${response.statusText} - ${errorText}`);
+        throw new Error(
+          `Ollama embedding 失败: ${response.statusText} - ${errorText}`,
+        );
       }
 
       const data = await response.json();
@@ -66,7 +68,9 @@ async function getEmbeddingWithRetry(
       retries--;
 
       if (retries > 0) {
-        console.warn(`[Ollama] Embedding 失败，剩余重试次数: ${retries}，错误: ${lastError.message}`);
+        console.warn(
+          `[Ollama] Embedding 失败，剩余重试次数: ${retries}，错误: ${lastError.message}`,
+        );
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     } finally {
@@ -74,7 +78,9 @@ async function getEmbeddingWithRetry(
     }
   }
 
-  throw new Error(`Ollama embedding 失败: ${lastError?.message}，请确保 Ollama 服务已启动`);
+  throw new Error(
+    `Ollama embedding 失败: ${lastError?.message}，请确保 Ollama 服务已启动`,
+  );
 }
 
 async function ollamaEmbed(text: string | string[]): Promise<number[][]> {
@@ -129,7 +135,10 @@ class KimiClient implements AIClient {
     });
   }
 
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<ChatResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options: ChatOptions = {},
+  ): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
       model: options.model || process.env.KIMI_MODEL || "moonshot-v1-32k",
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -146,7 +155,7 @@ class KimiClient implements AIClient {
   async chatStream(
     messages: ChatMessage[],
     options: ChatOptions = {},
-    onChunk?: (chunk: string) => void
+    onChunk?: (chunk: string) => void,
   ): Promise<ChatResponse> {
     const stream = await this.client.chat.completions.create(
       {
@@ -156,7 +165,7 @@ class KimiClient implements AIClient {
         max_tokens: options.maxTokens ?? 2000,
         stream: true,
       },
-      options.signal ? { signal: options.signal } : undefined
+      options.signal ? { signal: options.signal } : undefined,
     );
 
     let fullContent = "";
