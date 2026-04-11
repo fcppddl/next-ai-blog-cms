@@ -148,7 +148,7 @@ function useArticleContext(slug: string | null, enabled: boolean): ArticleContex
   const [ctx, setCtx] = useState<ArticleContext | null>(null);
 
   useEffect(() => {
-    if (!enabled || !slug) { setCtx(null); return; }
+    if (!enabled || !slug) return;
     let alive = true;
 
     fetch(`/api/posts/${encodeURIComponent(slug)}`, { cache: "no-store" })
@@ -179,7 +179,8 @@ function useArticleContext(slug: string | null, enabled: boolean): ArticleContex
     return () => { alive = false; };
   }, [slug, enabled]);
 
-  return ctx;
+  if (!enabled || !slug) return null;
+  return ctx && ctx.slug === slug ? ctx : null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
