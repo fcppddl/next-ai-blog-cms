@@ -9,7 +9,7 @@ import {
   FileText,
   FolderOpen,
   Tags,
-  ExternalLink,
+  Home,
   LogOut,
   User,
   Menu,
@@ -103,9 +103,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link href="/" target="_blank">
+            <Link href="/">
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-slate-100" title="查看前台">
-                <ExternalLink className="h-4 w-4" />
+                <Home className="h-4 w-4" />
               </Button>
             </Link>
             {session?.user && (
