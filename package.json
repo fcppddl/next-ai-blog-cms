@@ -11,6 +11,7 @@
     "postinstall": "prisma generate",
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:push": "dotenv -e .env.local -- prisma db push",
+    "db:push:prod": "dotenv -e .env.production -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
     "db:reset-admin": "dotenv -e .env.local -- tsx prisma/reset-admin.ts",

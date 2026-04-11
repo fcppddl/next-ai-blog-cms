@@ -56,7 +56,8 @@ ensure_npm || {
 }
 
 npm ci
-npm run db:push
+# 与 ecosystem 中 dotenv 一致，使用 .env.production（勿用 db:push，其读 .env.local）
+npm run db:push:prod
 npm run build
-pm2 reload ecosystem.config.js --update-env
+pm2 startOrReload ecosystem.config.js --update-env
 # AIGC END

@@ -6,19 +6,20 @@ module.exports = {
   apps: [
     {
       name: "next-ai-blog-cms",
-      script: "npm",
+      // 直接启动 Next，避免 npm 子进程导致 PM2 监控/内存显示异常
+      script: "node_modules/next/dist/bin/next",
       args: "start",
       cwd: process.cwd(),
       instances: 1,
+      exec_mode: "fork",
       autorestart: true,
       watch: false,
       max_memory_restart: "1G",
       min_uptime: "10s",
-      max_restarts: 5,
+      max_restarts: 15,
       restart_delay: 4000,
       kill_timeout: 5000,
-      wait_ready: true,
-      listen_timeout: 10000,
+      // 勿开 wait_ready：Next.js 不会向 PM2 发 process.send('ready')，会导致一直未就绪、反复重启与 502
       env: {
         NODE_ENV: "production",
         PORT: 3000,
