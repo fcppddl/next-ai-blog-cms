@@ -3,7 +3,8 @@
 # 若你使用 Vercel / Railway 等，可删掉本文件，在对应平台连接 GitHub 即可
 #
 # Secrets：SSH_HOST、SSH_USERNAME、SSH_PASSWORD 或 SSH_PRIVATE_KEY、DEPLOY_PATH。
-# 安装与构建命令写在仓库 scripts/deploy-remote.sh，避免在 YAML 里写复杂 shell 导致远程解析错误。
+# 构建在 scripts/deploy-remote.sh。若 git pull 报 GnuTLS/TLS，多为访问 GitHub 不稳，已加重试与 HTTP/1.1；
+# 仍失败请在服务器将 origin 改为 git@github.com:... 并配 Deploy Key。
 name: Deploy
 
 on:
@@ -32,12 +33,25 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 30m
           script_stop: true
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch origin
-            git checkout main
-            git pull origin main
+            git config http.postBuffer 524288000
+            git config http.version HTTP/1.1
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              if git fetch origin && git checkout main && git pull origin main; then
+                ok=1
+                break
+              fi
+              echo "git fetch/pull 失败，20s 后重试 ($attempt/5)..."
+              sleep 20
+            done
+            if [ "$ok" != "1" ]; then
+              echo "多次拉取仍失败。请在服务器执行: git remote -v；可改为 SSH 地址并配置 Deploy Key。"
+              exit 1
+            fi
             bash scripts/deploy-remote.sh
 # AIGC END
