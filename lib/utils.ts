@@ -34,7 +34,7 @@ export function calculateReadingTime(text: string): number {
  */
 export function generateExcerpt(
   content: string,
-  maxLength: number = 200
+  maxLength: number = 200,
 ): string {
   const plainText = content
     .replace(/#{1,6}\s+/g, "")
