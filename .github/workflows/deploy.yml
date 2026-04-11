@@ -1,0 +1,52 @@
+# AIGC START
+# 部署：CI 在 main 上成功后通过 SSH 在自建机上拉代码并构建重启
+# 若你使用 Vercel / Railway 等，可删掉本文件，在对应平台连接 GitHub 即可
+#
+# 认证二选一（在仓库 Settings → Secrets 里配置）：
+# - SSH_PASSWORD：服务器 SSH 登录密码（当前默认用法）
+# - SSH_PRIVATE_KEY：若改用密钥登录，可配置私钥并删掉下面的 password 行
+#   私钥生成：在本机执行 ssh-keygen -t ed25519 -C "github-actions"，把 ~/.ssh/id_ed25519.pub 内容
+#   追加到服务器的 ~/.ssh/authorized_keys，把 id_ed25519 文件全文粘贴到 Secret
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 仅：main 上 CI 成功后的自动部署，或手动运行
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script_stop: true
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin
+            git checkout main
+            git pull origin main
+            npm ci
+            npm run db:push
+            npm run build
+            # 按你的进程管理改写并取消注释，例如：
+            # pm2 restart next-ai-blog-cms || pm2 start npm --name "next-ai-blog-cms" -- start
+            # sudo systemctl restart next-ai-blog-cms
+            echo "Deploy finished. Start or restart your app (pm2/systemd) on the server if needed."
+# AIGC END

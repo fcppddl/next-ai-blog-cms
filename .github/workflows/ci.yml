@@ -1,0 +1,43 @@
+# AIGC START
+# CI：在 PR 与推送时运行，保证合并前可构建
+name: CI
+
+on:
+  pull_request:
+  push:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # 构建阶段占位；生产环境请在服务器或托管平台配置真实变量
+      DATABASE_URL: "file:./prisma/ci.db"
+      NEXTAUTH_SECRET: "ci-build-placeholder-not-used-at-runtime"
+      NEXTAUTH_URL: "http://localhost:3000"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build
+        run: npm run build
+# AIGC END

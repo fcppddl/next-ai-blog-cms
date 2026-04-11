@@ -1,4 +1,21 @@
-import { ChromaClient, Collection } from "chromadb";
+import { ChromaClient, Collection, type EmbeddingFunction } from "chromadb";
+
+/**
+ * 占位嵌入函数：向量在应用内（Ollama 等）计算后传入 upsert/query。
+ * 使用普通对象序列化为 Chroma 的 legacy 配置，且满足 `embeddingFunction ?? getEmbeddingFunction()` 中
+ * 左侧为真值，避免客户端再去加载 DefaultEmbeddingFunction（@chroma-core/default-embed）并打警告。
+ */
+function createApplicationSideEmbeddingFunction(): EmbeddingFunction {
+  return {
+    name: "application-side-precomputed",
+    getConfig: () => ({}),
+    async generate() {
+      throw new Error(
+        "Embeddings are computed in the application; Chroma only stores provided vectors.",
+      );
+    },
+  };
+}
 
 export interface VectorStore {
   upsert(vectors: Vector[]): Promise<string[]>;
@@ -41,7 +58,10 @@ class ChromaVectorStore implements VectorStore {
     if (this.initialized) return;
 
     try {
-      this.collection = await this.client.getOrCreateCollection({ name: this.collectionName });
+      this.collection = await this.client.getOrCreateCollection({
+        name: this.collectionName,
+        embeddingFunction: createApplicationSideEmbeddingFunction(),
+      });
       this.initialized = true;
     } catch (error) {
       console.error("Failed to initialize Chroma collection:", error);
