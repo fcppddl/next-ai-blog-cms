@@ -3,7 +3,7 @@
 # 若你使用 Vercel / Railway 等，可删掉本文件，在对应平台连接 GitHub 即可
 #
 # Secrets：SSH_HOST、SSH_USERNAME、SSH_PASSWORD 或 SSH_PRIVATE_KEY、DEPLOY_PATH。
-# 非交互式 SSH 默认没有 nvm 的 PATH，脚本用 bash -lc 模拟登录 shell，才能找到 npm / pm2。
+# 安装与构建命令写在仓库 scripts/deploy-remote.sh，避免在 YAML 里写复杂 shell 导致远程解析错误。
 name: Deploy
 
 on:
@@ -34,18 +34,10 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script_stop: true
           script: |
-            bash -lc "
             set -e
-            cd \"${{ secrets.DEPLOY_PATH }}\"
-            export NVM_DIR="$$HOME/.nvm"
-            [ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"
-            command -v npm >/dev/null || { [ -f "$$HOME/.bashrc" ] && . "$$HOME/.bashrc"; }
+            cd "${{ secrets.DEPLOY_PATH }}"
             git fetch origin
             git checkout main
             git pull origin main
-            npm ci
-            npm run db:push
-            npm run build
-            pm2 reload ecosystem.config.js --update-env
-            "
+            bash scripts/deploy-remote.sh
 # AIGC END
