@@ -11,7 +11,11 @@ const navLinks = [
   { href: "/about", label: "关于" },
 ];
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default function PublicLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -69,7 +73,11 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="菜单"
             >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {menuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -107,7 +115,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <main className="relative z-10 pt-16">{children}</main>
 
       {/* Footer */}
-      <footer className="relative z-10 mt-20 border-t border-border py-8">
+      <footer className="relative z-10 mt-12 border-t border-border py-5">
         <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} AI Blog. Built with Next.js + AI.
         </div>

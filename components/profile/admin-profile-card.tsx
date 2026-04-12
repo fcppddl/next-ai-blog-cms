@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Code2, Globe, AtSign, BookOpen, Eye, Layers } from "lucide-react";
+import {
+  Code2,
+  Globe,
+  AtSign,
+  BookOpen,
+  Eye,
+  Layers,
+  Folder,
+} from "lucide-react";
 
 interface ProfileData {
   username: string;
@@ -20,6 +28,7 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  icon?: string | null;
   postCount: number;
 }
 
@@ -162,9 +171,21 @@ export default function AdminProfileCard() {
                     <Link
                       key={cat.id}
                       href={`/?category=${cat.slug}`}
-                      className="group flex items-center justify-between rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
-                      <span>{cat.name}</span>
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span
+                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-base leading-none"
+                          aria-hidden
+                        >
+                          {cat.icon?.trim() ? (
+                            cat.icon.trim()
+                          ) : (
+                            <Folder className="h-3.5 w-3.5 opacity-70" />
+                          )}
+                        </span>
+                        <span className="truncate">{cat.name}</span>
+                      </span>
                       <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground transition-colors group-hover:bg-primary/15 group-hover:text-primary">
                         {cat.postCount}
                       </span>

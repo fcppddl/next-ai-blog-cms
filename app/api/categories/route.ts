@@ -15,6 +15,7 @@ export async function GET() {
       name: c.name,
       slug: c.slug,
       description: c.description,
+      icon: c.icon,
       postCount: c._count.posts,
     }))
   );

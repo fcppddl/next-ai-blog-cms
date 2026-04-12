@@ -105,9 +105,7 @@ model Category {
   slug        String  @unique
   description String?
 
-  color     String?
-  icon      String?
-  sortOrder Int     @default(0)
+  icon String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -118,10 +116,9 @@ model Category {
 }
 
 model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  color     String?
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

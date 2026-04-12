@@ -10,7 +10,10 @@ interface CoverImagePickerProps {
   onChange: (url: string) => void;
 }
 
-export default function CoverImagePicker({ value, onChange }: CoverImagePickerProps) {
+export default function CoverImagePicker({
+  value,
+  onChange,
+}: CoverImagePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -23,7 +26,10 @@ export default function CoverImagePicker({ value, onChange }: CoverImagePickerPr
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/admin/posts/cover-upload", { method: "POST", body: formData });
+    const res = await fetch("/api/admin/posts/cover-upload", {
+      method: "POST",
+      body: formData,
+    });
     const data = await res.json();
 
     if (res.ok) {
@@ -60,7 +66,11 @@ export default function CoverImagePicker({ value, onChange }: CoverImagePickerPr
               disabled={uploading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/90 text-gray-900 text-xs font-medium hover:bg-white transition-colors cursor-pointer"
             >
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ImagePlus className="h-3.5 w-3.5" />
+              )}
               更换
             </button>
             <button

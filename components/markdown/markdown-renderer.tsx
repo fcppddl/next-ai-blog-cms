@@ -320,10 +320,10 @@ export default function MarkdownRenderer({
       <div className="flex gap-20 min-w-0">
         <div className="flex-1 min-w-0 overflow-x-hidden">
           {showToc && toc.length > 0 && (
-            <div className="mb-6 xl:hidden">
+            <div className="mb-6 xl:hidden cursor-pointer">
               <button
                 onClick={() => setTocOpen(!tocOpen)}
-                className="inline-flex items-center space-x-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                className="inline-flex items-center space-x-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
               >
                 <List className="w-4 h-4" />
                 <span>目录</span>
@@ -338,7 +338,7 @@ export default function MarkdownRenderer({
                       <button
                         key={item.id}
                         onClick={() => scrollToHeading(item.id)}
-                        className={`block w-full truncate rounded py-2 px-3 text-left text-sm transition-all ${
+                        className={`block w-full cursor-pointer truncate rounded py-2 px-3 text-left text-sm transition-all ${
                           activeHeading === item.id
                             ? "bg-primary/15 font-semibold text-primary"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -379,12 +379,12 @@ export default function MarkdownRenderer({
 
         {showToc && toc.length > 0 && (
           <div
-            className={`hidden xl:block flex-shrink-0 transition-all duration-300 ${
+            className={`hidden xl:block flex-shrink-0 cursor-pointer transition-all duration-300 ${
               desktopTocCollapsed ? "w-12" : "w-64"
             }`}
           >
             <div className="sticky top-24 max-h-[calc(100vh-6rem)]">
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-6 flex items-center justify-between">
                 {!desktopTocCollapsed && (
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     Table of Contents
@@ -393,7 +393,7 @@ export default function MarkdownRenderer({
                 <button
                   type="button"
                   onClick={() => setDesktopTocCollapsed(!desktopTocCollapsed)}
-                  className="rounded-lg border border-border p-2 text-foreground transition-all hover:bg-muted"
+                  className="cursor-pointer rounded-lg border border-border p-2 text-foreground transition-all hover:bg-muted"
                   title={desktopTocCollapsed ? "展开目录" : "折叠目录"}
                 >
                   {desktopTocCollapsed ? (
@@ -410,7 +410,7 @@ export default function MarkdownRenderer({
                       <button
                         key={item.id}
                         onClick={() => scrollToHeading(item.id)}
-                        className={`block w-full truncate border-l-4 py-2 px-3 text-left text-sm transition-all ${
+                        className={`block w-full cursor-pointer truncate border-l-4 py-2 px-3 text-left text-sm transition-all ${
                           activeHeading === item.id
                             ? "border-primary bg-primary/10 font-semibold text-primary"
                             : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"

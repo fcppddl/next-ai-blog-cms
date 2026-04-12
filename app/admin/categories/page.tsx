@@ -15,7 +15,7 @@ interface Category {
   name: string;
   slug: string;
   description?: string;
-  color?: string;
+  icon?: string | null;
   stats?: { totalPosts: number; publishedPosts: number };
 }
 
@@ -27,7 +27,13 @@ export default function CategoriesPage() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [editValues, setEditValues] = useState({ name: "", slug: "", description: "" });
+  const [newIcon, setNewIcon] = useState("");
+  const [editValues, setEditValues] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    icon: "",
+  });
   const { toast } = useToast();
 
   const fetchCategories = async () => {
@@ -37,19 +43,30 @@ export default function CategoriesPage() {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCategories();
+  }, []);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
     const res = await fetch("/api/admin/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, slug: newSlug || createSlug(newName), description: newDesc || undefined }),
+      body: JSON.stringify({
+        name: newName,
+        slug: newSlug || createSlug(newName),
+        description: newDesc || undefined,
+        ...(newIcon.trim() ? { icon: newIcon.trim() } : {}),
+      }),
     });
     if (res.ok) {
       toast({ title: "分类创建成功" });
-      setNewName(""); setNewSlug(""); setNewDesc(""); setCreating(false);
+      setNewName("");
+      setNewSlug("");
+      setNewDesc("");
+      setNewIcon("");
+      setCreating(false);
       fetchCategories();
     } else {
       const err = await res.json();
@@ -75,7 +92,9 @@ export default function CategoriesPage() {
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`确认删除分类「${name}」？`)) return;
-    const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/categories/${id}`, {
+      method: "DELETE",
+    });
     if (res.ok) {
       toast({ title: "分类已删除" });
       fetchCategories();
@@ -84,7 +103,12 @@ export default function CategoriesPage() {
 
   const startEdit = (cat: Category) => {
     setEditingId(cat.id);
-    setEditValues({ name: cat.name, slug: cat.slug, description: cat.description ?? "" });
+    setEditValues({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description ?? "",
+      icon: cat.icon ?? "",
+    });
   };
 
   return (
@@ -93,7 +117,9 @@ export default function CategoriesPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">分类管理</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              分类管理
+            </h1>
           </div>
           <Button onClick={() => setCreating(true)} disabled={creating}>
             <Plus className="h-4 w-4 mr-2" /> 新建分类
@@ -103,19 +129,28 @@ export default function CategoriesPage() {
         {/* Create Form */}
         {creating && (
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
-            <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">新建分类</h3>
+            <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">
+              新建分类
+            </h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-gray-700 dark:text-slate-300">名称 *</Label>
+                <Label className="text-gray-700 dark:text-slate-300">
+                  名称 *
+                </Label>
                 <Input
                   value={newName}
-                  onChange={(e) => { setNewName(e.target.value); if (!newSlug) setNewSlug(createSlug(e.target.value)); }}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    if (!newSlug) setNewSlug(createSlug(e.target.value));
+                  }}
                   placeholder="分类名称"
                   className="border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100 dark:placeholder:text-slate-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-700 dark:text-slate-300">Slug *</Label>
+                <Label className="text-gray-700 dark:text-slate-300">
+                  Slug *
+                </Label>
                 <Input
                   value={newSlug}
                   onChange={(e) => setNewSlug(e.target.value)}
@@ -123,8 +158,23 @@ export default function CategoriesPage() {
                   className="font-mono border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100 dark:placeholder:text-slate-500"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-gray-700 dark:text-slate-300">描述</Label>
+              {/* 图标与描述同一行（md+ 并排） */}
+              <div className="space-y-2">
+                <Label className="text-gray-700 dark:text-slate-300">
+                  图标
+                </Label>
+                <Input
+                  value={newIcon}
+                  onChange={(e) => setNewIcon(e.target.value)}
+                  placeholder="如 🤖（可选）"
+                  maxLength={50}
+                  className="border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100 dark:placeholder:text-slate-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-gray-700 dark:text-slate-300">
+                  描述
+                </Label>
                 <Input
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
@@ -138,7 +188,13 @@ export default function CategoriesPage() {
               <Button
                 variant="outline"
                 className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-300 dark:hover:bg-slate-700/80"
-                onClick={() => { setCreating(false); setNewName(""); setNewSlug(""); setNewDesc(""); }}
+                onClick={() => {
+                  setCreating(false);
+                  setNewName("");
+                  setNewSlug("");
+                  setNewDesc("");
+                  setNewIcon("");
+                }}
               >
                 取消
               </Button>
@@ -156,50 +212,135 @@ export default function CategoriesPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">名称</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Slug</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">文章数</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">操作</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase min-w-[10rem] w-[12%]">
+                    图标
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    名称
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
+                    Slug
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    文章数
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {categories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr
+                    key={cat.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >
+                    {/* 编辑时图标输入加宽 */}
+                    <td className="px-6 py-4 align-middle min-w-[10rem] w-[12%]">
+                      {editingId === cat.id ? (
+                        <Input
+                          value={editValues.icon}
+                          onChange={(e) =>
+                            setEditValues({
+                              ...editValues,
+                              icon: e.target.value,
+                            })
+                          }
+                          className="h-8 w-full min-w-[9rem] text-base"
+                          maxLength={50}
+                          placeholder="🤖"
+                          aria-label="分类图标"
+                        />
+                      ) : (
+                        <span
+                          className="text-xl leading-none"
+                          title={cat.icon?.trim() || undefined}
+                        >
+                          {cat.icon?.trim() ? cat.icon : "—"}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {editingId === cat.id ? (
-                        <Input value={editValues.name} onChange={(e) => setEditValues({ ...editValues, name: e.target.value })} className="h-8" />
+                        <Input
+                          value={editValues.name}
+                          onChange={(e) =>
+                            setEditValues({
+                              ...editValues,
+                              name: e.target.value,
+                            })
+                          }
+                          className="h-8"
+                        />
                       ) : (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{cat.name}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {cat.name}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       {editingId === cat.id ? (
-                        <Input value={editValues.slug} onChange={(e) => setEditValues({ ...editValues, slug: e.target.value })} className="h-8 font-mono text-sm" />
+                        <Input
+                          value={editValues.slug}
+                          onChange={(e) =>
+                            setEditValues({
+                              ...editValues,
+                              slug: e.target.value,
+                            })
+                          }
+                          className="h-8 font-mono text-sm"
+                        />
                       ) : (
-                        <span className="font-mono text-xs text-gray-400">{cat.slug}</span>
+                        <span className="font-mono text-xs text-gray-400">
+                          {cat.slug}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">{cat.stats?.totalPosts ?? 0}</span>
+                      <span className="text-sm text-gray-500">
+                        {cat.stats?.totalPosts ?? 0}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         {editingId === cat.id ? (
                           <>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600" onClick={() => handleUpdate(cat.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-green-600"
+                              onClick={() => handleUpdate(cat.id)}
+                            >
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingId(null)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => setEditingId(null)}
+                            >
                               <X className="h-4 w-4" />
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => startEdit(cat)}>
-                              <Edit className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs"
+                              onClick={() => startEdit(cat)}
+                            >
+                              <Edit className="h-3 w-3" />
+                              编辑
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-700" onClick={() => handleDelete(cat.id, cat.name)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
+                              onClick={() => handleDelete(cat.id, cat.name)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              删除
                             </Button>
                           </>
                         )}
