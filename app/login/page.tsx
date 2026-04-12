@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface LoginFormData {
   username: string;
@@ -71,15 +72,19 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 py-12 px-4 relative overflow-hidden">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-gray-200/40 to-transparent rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-gray-200/40 to-transparent rounded-full blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/35 to-background py-12 px-4 relative overflow-hidden">
+      {/* 登录页：语义化背景/装饰 + 主题切换，避免黑夜模式仍强制浅色底 */}
+      <div className="fixed right-4 top-4 z-20">
+        <ThemeToggle />
       </div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/15 to-transparent rounded-full blur-3xl dark:from-primary/25" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-muted-foreground/10 to-transparent rounded-full blur-3xl dark:from-muted-foreground/15" />
+      </div>
+      {/* AIGC END */}
 
       <div className="w-full max-w-md relative z-10 animate-scale-in">
-        <Card className="shadow-2xl border-0 backdrop-blur-xl bg-white/80">
+        <Card className="shadow-2xl border border-border/60 backdrop-blur-xl bg-card/85">
           <CardHeader className="space-y-6 pb-8 pt-12">
             <div className="flex items-center justify-center">
               <div className="w-20 h-20 bg-gradient-to-br from-gray-900 to-gray-700 rounded-3xl flex items-center justify-center shadow-lg">
@@ -180,7 +185,7 @@ function LoginForm() {
           </CardContent>
         </Card>
 
-        <p className="mt-8 text-center text-sm text-gray-500">
+        <p className="mt-8 text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} AI 博客管理系统. All rights reserved.
         </p>
       </div>
@@ -192,8 +197,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-muted border-t-foreground" />
         </div>
       }
     >

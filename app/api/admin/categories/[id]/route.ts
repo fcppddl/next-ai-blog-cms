@@ -8,14 +8,12 @@ const updateCategorySchema = z.object({
   name: z.string().min(1).max(50).optional(),
   slug: z.string().min(1).max(50).optional(),
   description: z.string().max(200).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   icon: z.string().max(50).optional(),
-  sortOrder: z.number().int().min(0).optional(),
 });
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -29,7 +27,10 @@ export async function PUT(
     return NextResponse.json(cat);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "数据验证失败", details: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "数据验证失败", details: error.issues },
+        { status: 400 },
+      );
     }
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
   }
@@ -37,7 +38,7 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -45,7 +46,8 @@ export async function DELETE(
   }
   const { id } = await params;
   const existing = await prisma.category.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "分类不存在" }, { status: 404 });
+  if (!existing)
+    return NextResponse.json({ error: "分类不存在" }, { status: 404 });
   await prisma.category.delete({ where: { id } });
   return NextResponse.json({ message: "分类删除成功" });
 }

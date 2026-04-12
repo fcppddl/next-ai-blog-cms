@@ -7,7 +7,7 @@ import PublicLayout from "@/components/layout/public-layout";
 import MarkdownRenderer from "@/components/markdown/markdown-renderer";
 import RelatedPosts from "@/components/posts/related-posts";
 import { Badge } from "@/components/ui/badge";
-import { ImmersiveReaderToggle } from "@/components/immersive-reader";
+import { PostFullscreenRegion, PostFullscreenToggle } from "@/components/posts/post-fullscreen-region";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -45,15 +45,17 @@ export default async function PostPage({ params }: PageProps) {
 
   return (
     <PublicLayout>
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        {/* Back */}
-        <Link
-          href="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          返回首页
-        </Link>
+      <PostFullscreenRegion>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回首页
+          </Link>
+          <PostFullscreenToggle />
+        </div>
 
         {/* Header */}
         <header className="mb-10">
@@ -91,11 +93,6 @@ export default async function PostPage({ params }: PageProps) {
                 {post.readingTime} 分钟阅读
               </span>
             )}
-            <ImmersiveReaderToggle
-              title={post.title}
-              content={post.content}
-              createdAt={post.createdAt}
-            />
           </div>
 
           {post.coverImage && (
@@ -119,7 +116,7 @@ export default async function PostPage({ params }: PageProps) {
           categorySlug={post.category?.slug}
           currentSlug={post.slug}
         />
-      </div>
+      </PostFullscreenRegion>
     </PublicLayout>
   );
 }

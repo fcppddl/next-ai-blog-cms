@@ -9,7 +9,7 @@ async function main() {
   // 创建默认管理员用户
   const adminPassword = await bcrypt.hash(
     process.env.ADMIN_PASSWORD || "admin123",
-    12
+    12,
   );
 
   const adminUser = await prisma.user.upsert({
@@ -37,33 +37,25 @@ async function main() {
       name: "AI",
       slug: "ai",
       description: "人工智能、大模型、机器学习相关内容",
-      color: "#8B5CF6",
       icon: "🤖",
-      sortOrder: 1,
     },
     {
       name: "前端",
       slug: "frontend",
       description: "前端开发技术、框架、工具分享",
-      color: "#3B82F6",
-      icon: "🪷",
-      sortOrder: 2,
+      icon: "🌐",
     },
     {
       name: "编程",
       slug: "programming",
       description: "编程基础知识、算法、数据结构",
-      color: "#F59E0B",
-      icon: "🧮",
-      sortOrder: 3,
+      icon: "💻",
     },
     {
       name: "随笔",
       slug: "essays",
       description: "生活感悟、思考随笔、日常记录",
-      color: "#14B8A6",
       icon: "📝",
-      sortOrder: 4,
     },
   ];
 
@@ -73,9 +65,7 @@ async function main() {
       update: {
         name: categoryData.name,
         description: categoryData.description,
-        color: categoryData.color,
         icon: categoryData.icon,
-        sortOrder: categoryData.sortOrder,
       },
       create: categoryData,
     });
@@ -84,27 +74,29 @@ async function main() {
 
   // 创建示例标签
   const tags = [
-    { name: "TypeScript", slug: "ts", color: "#3178C6" },
-    { name: "Next.js", slug: "nextjs", color: "#000000" },
-    { name: "React", slug: "react", color: "#61DAFB" },
-    { name: "Node.js", slug: "node", color: "#339933" },
-    { name: "Prisma", slug: "prisma", color: "#2D3748" },
-    { name: "Prompt", slug: "prompt", color: "#FF6B6B" },
-    { name: "RAG", slug: "rag", color: "#9B59B6" },
-    { name: "Agent", slug: "agent", color: "#E74C3C" },
+    { name: "TypeScript", slug: "ts" },
+    { name: "Next.js", slug: "nextjs" },
+    { name: "React", slug: "react" },
+    { name: "Node.js", slug: "node" },
+    { name: "Prisma", slug: "prisma" },
+    { name: "Prompt", slug: "prompt" },
+    { name: "RAG", slug: "rag" },
+    { name: "Agent", slug: "agent" },
   ];
 
   for (const tagData of tags) {
     const tag = await prisma.tag.upsert({
       where: { slug: tagData.slug },
-      update: { name: tagData.name, color: tagData.color },
+      update: { name: tagData.name },
       create: tagData,
     });
     console.log("✅ 创建标签:", tag.name);
   }
 
   // 创建欢迎文章
-  const aiCategory = await prisma.category.findUnique({ where: { slug: "ai" } });
+  const aiCategory = await prisma.category.findUnique({
+    where: { slug: "ai" },
+  });
   const nextjsTag = await prisma.tag.findUnique({ where: { slug: "nextjs" } });
   const tsTag = await prisma.tag.findUnique({ where: { slug: "ts" } });
 
@@ -128,7 +120,8 @@ async function main() {
 - 🖼️ **图片管理**：完善的图片上传系统
 
 欢迎探索，Happy Coding! 🚀`,
-        excerpt: "欢迎来到这个基于 Next.js 构建的 AI 博客系统，支持 AI 写作助手和 RAG 智能问答。",
+        excerpt:
+          "欢迎来到这个基于 Next.js 构建的 AI 博客系统，支持 AI 写作助手和 RAG 智能问答。",
         published: true,
         featured: true,
         categoryId: aiCategory.id,
@@ -139,7 +132,9 @@ async function main() {
 
     if (nextjsTag) {
       await prisma.postTag.upsert({
-        where: { postId_tagId: { postId: welcomePost.id, tagId: nextjsTag.id } },
+        where: {
+          postId_tagId: { postId: welcomePost.id, tagId: nextjsTag.id },
+        },
         update: {},
         create: { postId: welcomePost.id, tagId: nextjsTag.id },
       });

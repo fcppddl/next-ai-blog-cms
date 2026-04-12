@@ -14,7 +14,6 @@ interface Tag {
   id: string;
   name: string;
   slug: string;
-  color?: string;
   stats?: { totalPosts: number; publishedPosts: number };
 }
 
@@ -35,19 +34,26 @@ export default function TagsPage() {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchTags(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchTags();
+  }, []);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
     const res = await fetch("/api/admin/tags", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, slug: newSlug || createSlug(newName) }),
+      body: JSON.stringify({
+        name: newName,
+        slug: newSlug || createSlug(newName),
+      }),
     });
     if (res.ok) {
       toast({ title: "标签创建成功" });
-      setNewName(""); setNewSlug(""); setCreating(false);
+      setNewName("");
+      setNewSlug("");
+      setCreating(false);
       fetchTags();
     } else {
       const err = await res.json();
@@ -86,7 +92,9 @@ export default function TagsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">标签管理</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              标签管理
+            </h1>
           </div>
           <Button onClick={() => setCreating(true)} disabled={creating}>
             <Plus className="h-4 w-4 mr-2" /> 新建标签
@@ -99,16 +107,37 @@ export default function TagsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>名称 *</Label>
-                <Input value={newName} onChange={(e) => { setNewName(e.target.value); if (!newSlug) setNewSlug(createSlug(e.target.value)); }} placeholder="标签名称" />
+                <Input
+                  value={newName}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    if (!newSlug) setNewSlug(createSlug(e.target.value));
+                  }}
+                  placeholder="标签名称"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Slug *</Label>
-                <Input value={newSlug} onChange={(e) => setNewSlug(e.target.value)} placeholder="url-slug" className="font-mono" />
+                <Input
+                  value={newSlug}
+                  onChange={(e) => setNewSlug(e.target.value)}
+                  placeholder="url-slug"
+                  className="font-mono"
+                />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
               <Button onClick={handleCreate}>创建</Button>
-              <Button variant="outline" onClick={() => { setCreating(false); setNewName(""); setNewSlug(""); }}>取消</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCreating(false);
+                  setNewName("");
+                  setNewSlug("");
+                }}
+              >
+                取消
+              </Button>
             </div>
           </div>
         )}
@@ -122,50 +151,113 @@ export default function TagsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">名称</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Slug</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">文章数</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">操作</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    名称
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
+                    Slug
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    文章数
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {tags.map((tag) => (
-                  <tr key={tag.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr
+                    key={tag.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >
                     <td className="px-6 py-4">
                       {editingId === tag.id ? (
-                        <Input value={editValues.name} onChange={(e) => setEditValues({ ...editValues, name: e.target.value })} className="h-8" />
+                        <Input
+                          value={editValues.name}
+                          onChange={(e) =>
+                            setEditValues({
+                              ...editValues,
+                              name: e.target.value,
+                            })
+                          }
+                          className="h-8"
+                        />
                       ) : (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{tag.name}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {tag.name}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       {editingId === tag.id ? (
-                        <Input value={editValues.slug} onChange={(e) => setEditValues({ ...editValues, slug: e.target.value })} className="h-8 font-mono text-sm" />
+                        <Input
+                          value={editValues.slug}
+                          onChange={(e) =>
+                            setEditValues({
+                              ...editValues,
+                              slug: e.target.value,
+                            })
+                          }
+                          className="h-8 font-mono text-sm"
+                        />
                       ) : (
-                        <span className="font-mono text-xs text-gray-400">{tag.slug}</span>
+                        <span className="font-mono text-xs text-gray-400">
+                          {tag.slug}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">{tag.stats?.totalPosts ?? 0}</span>
+                      <span className="text-sm text-gray-500">
+                        {tag.stats?.totalPosts ?? 0}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         {editingId === tag.id ? (
                           <>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600" onClick={() => handleUpdate(tag.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-green-600"
+                              onClick={() => handleUpdate(tag.id)}
+                            >
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingId(null)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => setEditingId(null)}
+                            >
                               <X className="h-4 w-4" />
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => { setEditingId(tag.id); setEditValues({ name: tag.name, slug: tag.slug }); }}>
-                              <Edit className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs"
+                              onClick={() => {
+                                setEditingId(tag.id);
+                                setEditValues({
+                                  name: tag.name,
+                                  slug: tag.slug,
+                                });
+                              }}
+                            >
+                              <Edit className="h-3 w-3" />
+                              编辑
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-700" onClick={() => handleDelete(tag.id, tag.name)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
+                              onClick={() => handleDelete(tag.id, tag.name)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              删除
                             </Button>
                           </>
                         )}

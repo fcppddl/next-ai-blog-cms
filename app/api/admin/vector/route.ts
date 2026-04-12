@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { indexAllPosts, indexPost, deletePostIndex } from "@/lib/vector/indexer";
+import {
+  indexAllPosts,
+  indexPost,
+  deletePostIndex,
+} from "@/lib/vector/indexer";
 
 // GET /api/admin/vector — 返回索引状态
 export async function GET() {
@@ -14,13 +18,19 @@ export async function GET() {
     prisma.postVectorIndex.count(),
   ]);
 
-  const indexed = await prisma.postVectorIndex.findMany({
+  const allPublished = await prisma.post.findMany({
+    where: { published: true },
     select: {
-      postId: true,
-      chunkCount: true,
-      indexedAt: true,
-      updatedAt: true,
-      post: { select: { title: true, slug: true } },
+      id: true,
+      title: true,
+      slug: true,
+      vectorIndex: {
+        select: {
+          chunkCount: true,
+          indexedAt: true,
+          updatedAt: true,
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -29,14 +39,18 @@ export async function GET() {
     totalPosts,
     indexedCount: indexedPosts,
     pendingCount: Math.max(0, totalPosts - indexedPosts),
-    posts: indexed.map((r) => ({
-      postId: r.postId,
-      title: r.post.title,
-      slug: r.post.slug,
-      chunkCount: r.chunkCount,
-      indexedAt: r.indexedAt,
-      updatedAt: r.updatedAt,
-    })),
+    posts: allPublished.map((p) => {
+      const vi = p.vectorIndex;
+      return {
+        postId: p.id,
+        title: p.title,
+        slug: p.slug,
+        indexed: !!vi,
+        chunkCount: vi?.chunkCount ?? 0,
+        indexedAt: vi?.indexedAt ?? null,
+        updatedAt: vi?.updatedAt ?? null,
+      };
+    }),
   });
 }
 
@@ -66,7 +80,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "index_post") {
-    if (!postId) return NextResponse.json({ error: "缺少 postId" }, { status: 400 });
+    if (!postId)
+      return NextResponse.json({ error: "缺少 postId" }, { status: 400 });
     try {
       await indexPost(postId, { force });
       return NextResponse.json({ ok: true });
@@ -77,13 +92,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "delete_post") {
-    if (!postId) return NextResponse.json({ error: "缺少 postId" }, { status: 400 });
+    if (!postId)
+      return NextResponse.json({ error: "缺少 postId" }, { status: 400 });
     try {
       await deletePostIndex(postId);
       return NextResponse.json({ ok: true });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      return NextResponse.json({ error: `删除索引失败: ${msg}` }, { status: 500 });
+      return NextResponse.json(
+        { error: `删除索引失败: ${msg}` },
+        { status: 500 },
+      );
     }
   }
 

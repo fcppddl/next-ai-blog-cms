@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleLoading } from "@/components/ui/loading";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Search,
   Edit,
@@ -110,15 +117,22 @@ export default function PostsPage() {
               className="pl-9 dark:bg-gray-800/80 dark:border-slate-700 dark:text-gray-100 dark:placeholder:text-slate-500"
             />
           </div>
-          <select
+          <Select
             value={status}
-            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm dark:bg-gray-800/80 dark:border-slate-700 dark:text-gray-200"
+            onValueChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
           >
-            <option value="all">全部</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
-          </select>
+            <SelectTrigger className="h-10 min-w-[8rem] shrink-0 border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100">
+              <SelectValue placeholder="状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="published">已发布</SelectItem>
+              <SelectItem value="draft">草稿</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -170,27 +184,30 @@ export default function PostsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-700/80"
+                          variant="outline"
+                          className="gap-1 h-7 text-xs"
                           onClick={() => togglePublish(post)}
                           title={post.published ? "取消发布" : "发布"}
                         >
-                          {post.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {post.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {post.published ? "下架" : "发布"}
                         </Button>
-                        <Link href={`/admin/posts/${post.id}/edit`}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700/80">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <Button asChild size="sm" variant="outline" className="gap-1 h-7 text-xs">
+                          <Link href={`/admin/posts/${post.id}/edit`}>
+                            <Edit className="h-3 w-3" />
+                            编辑
+                          </Link>
+                        </Button>
                         <Button
-                          variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          variant="outline"
+                          className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
                           onClick={() => handleDelete(post.id, post.title)}
                           disabled={deletingId === post.id}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
+                          删除
                         </Button>
                       </div>
                     </td>
