@@ -392,7 +392,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         if (!request.signal.aborted) {
           flushBufferedChunk();
-          console.error("AI 看板娘流式对话失败:", error);
+          console.error("AI 对话流式对话失败:", error);
           sendEvent("error", { message: getErrorMessage(error) });
         }
       } finally {

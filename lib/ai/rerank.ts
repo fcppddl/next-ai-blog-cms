@@ -34,7 +34,7 @@ function getDashscopeRerankClient(apiKey: string): OpenAI {
   return client;
 }
 
-/** 向量库多召回条数：仅在有 DASHSCOPE_API_KEY 且未禁用 rerank 时大于 finalTopK */
+/** 向量库多召回条数：仅在已配置 RAG_RERANK_API_KEY 且未禁用 rerank 时大于 finalTopK */
 export function getRagVectorRecallLimit(finalTopK: number): number {
   const apiKey = process.env.RAG_RERANK_API_KEY?.trim();
   if (!apiKey || process.env.RAG_RERANK_DISABLED === "true") {
@@ -96,7 +96,7 @@ function parseRerankResults(data: unknown): Array<{
 
 /**
  * 使用阿里云百炼 qwen3-rerank 对召回片段重排序（OpenAI 兼容 SDK → POST /reranks）。
- * 需配置 DASHSCOPE_API_KEY；可设 RAG_RERANK_DISABLED=true 关闭。
+ * 需配置 RAG_RERANK_API_KEY；可设 RAG_RERANK_DISABLED=true 关闭。
  */
 export async function rerankWithQwen3Rerank(params: {
   query: string;
@@ -106,6 +106,7 @@ export async function rerankWithQwen3Rerank(params: {
 }): Promise<RetrievedChunk[] | null> {
   const { query, chunks, topN, signal } = params;
   const apiKey = process.env.RAG_RERANK_API_KEY?.trim();
+
   if (!apiKey || process.env.RAG_RERANK_DISABLED === "true") {
     return null;
   }
