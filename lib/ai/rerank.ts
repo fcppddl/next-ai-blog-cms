@@ -1,8 +1,42 @@
+import OpenAI from "openai";
 import type { RetrievedChunk } from "@/lib/ai/companion";
+
+/**
+ * 重排序 OpenAI 兼容接口在 **compatible-api**（与 chat 的 compatible-mode 不同）。
+ * 文档：POST .../compatible-api/v1/reranks
+ */
+const DEFAULT_RAG_RERANK_BASE_URL =
+  "https://dashscope.aliyuncs.com/compatible-api/v1";
+const DEFAULT_RAG_RERANK_MODEL = "qwen3-rerank";
+
+let dashscopeClientCache: {
+  apiKey: string;
+  baseURL: string;
+  client: OpenAI;
+} | null = null;
+
+function getDashscopeRerankClient(apiKey: string): OpenAI {
+  const baseURL =
+    process.env.RAG_RERANK_BASE_URL?.trim() || DEFAULT_RAG_RERANK_BASE_URL;
+  if (
+    dashscopeClientCache &&
+    dashscopeClientCache.apiKey === apiKey &&
+    dashscopeClientCache.baseURL === baseURL
+  ) {
+    return dashscopeClientCache.client;
+  }
+  const client = new OpenAI({
+    apiKey,
+    baseURL,
+    maxRetries: 1,
+  });
+  dashscopeClientCache = { apiKey, baseURL, client };
+  return client;
+}
 
 /** 向量库多召回条数：仅在有 DASHSCOPE_API_KEY 且未禁用 rerank 时大于 finalTopK */
 export function getRagVectorRecallLimit(finalTopK: number): number {
-  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
+  const apiKey = process.env.RAG_RERANK_API_KEY?.trim();
   if (!apiKey || process.env.RAG_RERANK_DISABLED === "true") {
     return finalTopK;
   }
@@ -10,10 +44,6 @@ export function getRagVectorRecallLimit(finalTopK: number): number {
   const n = Number.isFinite(raw) ? raw : 10;
   return Math.max(finalTopK, Math.min(n, 500));
 }
-
-/** 百炼 OpenAI 兼容 rerank 端点（qwen3-rerank） */
-const DASHSCOPE_RERANK_URL =
-  "https://dashscope.aliyuncs.com/compatible-api/v1/reranks";
 
 /** 单条文档约 4000 token 上限的保守字符截断（中文为主） */
 const RERANK_DOC_MAX_CHARS = 8000;
@@ -65,8 +95,8 @@ function parseRerankResults(data: unknown): Array<{
 }
 
 /**
- * 使用阿里云百炼 qwen3-rerank 对召回片段重排序。
- * 需配置环境变量 DASHSCOPE_API_KEY；可设 RAG_RERANK_DISABLED=true 关闭。
+ * 使用阿里云百炼 qwen3-rerank 对召回片段重排序（OpenAI 兼容 SDK → POST /reranks）。
+ * 需配置 DASHSCOPE_API_KEY；可设 RAG_RERANK_DISABLED=true 关闭。
  */
 export async function rerankWithQwen3Rerank(params: {
   query: string;
@@ -75,7 +105,7 @@ export async function rerankWithQwen3Rerank(params: {
   signal?: AbortSignal;
 }): Promise<RetrievedChunk[] | null> {
   const { query, chunks, topN, signal } = params;
-  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
+  const apiKey = process.env.RAG_RERANK_API_KEY?.trim();
   if (!apiKey || process.env.RAG_RERANK_DISABLED === "true") {
     return null;
   }
@@ -83,7 +113,8 @@ export async function rerankWithQwen3Rerank(params: {
     return null;
   }
 
-  const model = process.env.RAG_RERANK_MODEL?.trim() || "qwen3-rerank";
+  const model =
+    process.env.RAG_RERANK_MODEL?.trim() || DEFAULT_RAG_RERANK_MODEL;
   const instruct = DEFAULT_RERANK_INSTRUCT;
 
   const documents = chunks.map((c) => truncateDoc(c.document));
@@ -96,28 +127,11 @@ export async function rerankWithQwen3Rerank(params: {
   };
 
   try {
-    const res = await fetch(DASHSCOPE_RERANK_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+    const client = getDashscopeRerankClient(apiKey);
+    const data = (await client.post("/reranks", {
+      body,
       signal,
-      cache: "no-store",
-    });
-
-    const data: unknown = await res.json().catch(() => null);
-    if (!res.ok) {
-      console.warn(
-        "[RAG] qwen3-rerank HTTP 失败:",
-        res.status,
-        typeof data === "object" && data && "message" in data
-          ? (data as { message?: string }).message
-          : "",
-      );
-      return null;
-    }
+    })) as unknown;
 
     const parsed = parseRerankResults(data);
     if (!parsed) {
@@ -139,10 +153,13 @@ export async function rerankWithQwen3Rerank(params: {
     return reranked.length > 0 ? reranked : null;
   } catch (e) {
     if (signal?.aborted) return null;
-    console.warn(
-      "[RAG] qwen3-rerank 调用异常:",
-      e instanceof Error ? e.message : e,
-    );
+    const msg =
+      e instanceof OpenAI.APIError
+        ? `${e.status} ${e.message}`
+        : e instanceof Error
+          ? e.message
+          : String(e);
+    console.warn("[RAG] qwen3-rerank 调用失败:", msg);
     return null;
   }
 }
