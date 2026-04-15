@@ -120,18 +120,27 @@ async function ollamaEmbed(text: string | string[]): Promise<number[][]> {
   return embeddings;
 }
 
-class KimiClient implements AIClient {
+class ChatClient implements AIClient {
   private client: OpenAI;
 
   constructor() {
-    const apiKey = process.env.KIMI_API_KEY;
+    const apiKey = process.env.CHAT_API_KEY;
     if (!apiKey) {
-      throw new Error("请配置 KIMI_API_KEY 环境变量");
+      throw new Error("请配置 CHAT_API_KEY 环境变量");
     }
 
+    if (!process.env.CHAT_BASE_URL) {
+      throw new Error("请配置 CHAT_BASE_URL 环境变量");
+    }
+
+    if (!process.env.CHAT_MODEL) {
+      throw new Error("请配置 CHAT_MODEL 环境变量");
+    }
+
+    // 对话补全须用 compatible-mode；compatible-api 为重排序等接口，误用会 404
     this.client = new OpenAI({
       apiKey,
-      baseURL: process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1",
+      baseURL: process.env.CHAT_BASE_URL,
     });
   }
 
@@ -140,7 +149,7 @@ class KimiClient implements AIClient {
     options: ChatOptions = {},
   ): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
-      model: options.model || process.env.KIMI_MODEL || "moonshot-v1-32k",
+      model: options.model || process.env.CHAT_MODEL || "",
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 2000,
@@ -157,14 +166,19 @@ class KimiClient implements AIClient {
     options: ChatOptions = {},
     onChunk?: (chunk: string) => void,
   ): Promise<ChatResponse> {
+    // 阿里云 compatible-mode 支持 enable_search，但 OpenAI SDK 类型未包含该字段，需与流式参数做交集
+    const streamBody: OpenAI.ChatCompletionCreateParamsStreaming & {
+      enable_search?: boolean;
+    } = {
+      model: options.model || process.env.CHAT_MODEL || "",
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 2000,
+      stream: true,
+      enable_search: true,
+    };
     const stream = await this.client.chat.completions.create(
-      {
-        model: options.model || process.env.KIMI_MODEL || "moonshot-v1-32k",
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 2000,
-        stream: true,
-      },
+      streamBody,
       options.signal ? { signal: options.signal } : undefined,
     );
 
@@ -197,7 +211,7 @@ let aiClientInstance: AIClient | null = null;
 
 export function getAIClient(): AIClient {
   if (!aiClientInstance) {
-    aiClientInstance = new KimiClient();
+    aiClientInstance = new ChatClient();
   }
   return aiClientInstance;
 }

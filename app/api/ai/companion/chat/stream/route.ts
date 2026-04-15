@@ -12,6 +12,10 @@ import {
   type CompanionMode,
   type RetrievedChunk,
 } from "@/lib/ai/companion";
+import {
+  rerankWithQwen3Rerank,
+  getRagVectorRecallLimit,
+} from "@/lib/ai/rerank";
 import { getVectorStore } from "@/lib/vector/store";
 
 interface CompanionHistoryMessage {
@@ -33,7 +37,7 @@ const MAX_HISTORY_MESSAGES = 12;
 const MAX_HISTORY_MESSAGE_LENGTH = 1200;
 const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
 const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
-const RAG_TOP_K = 3;
+const RAG_TOP_K = parseInt(process.env.RAG_TOP_K || "3", 10);
 
 function isCompanionMode(value: unknown): value is CompanionMode {
   return value === "articles" || value === "author" || value === "free";
@@ -112,19 +116,22 @@ function getErrorMessage(error: unknown): string {
 async function tryVectorSearch(
   query: string,
   aiClient: ReturnType<typeof getAIClient>,
+  signal?: AbortSignal,
 ): Promise<RetrievedChunk[] | null> {
   try {
     const embeddings = await aiClient.embed(query);
     if (!embeddings.length || !embeddings[0].length) return null;
 
     const vectorStore = getVectorStore();
+    const recallLimit = getRagVectorRecallLimit(RAG_TOP_K);
     const results = await vectorStore.search(embeddings[0], {
-      limit: RAG_TOP_K,
+      limit: recallLimit,
     });
+    console.log("results", results);
 
     if (!results.length) return null;
 
-    return results.map((r) => ({
+    const chunks: RetrievedChunk[] = results.map((r) => ({
       id: r.id,
       document: r.document || "",
       score: r.score,
@@ -145,6 +152,20 @@ async function tryVectorSearch(
             : undefined,
       },
     }));
+
+    const reranked = await rerankWithQwen3Rerank({
+      query,
+      chunks,
+      topN: RAG_TOP_K,
+      signal,
+    });
+    console.log("reranked", reranked);
+
+    if (reranked && reranked.length > 0) {
+      return reranked;
+    }
+
+    return chunks.slice(0, RAG_TOP_K);
   } catch (error) {
     console.warn(
       "[RAG] 向量检索失败，降级到元信息模式:",
@@ -237,7 +258,7 @@ export async function POST(request: NextRequest) {
         const [articles, author, ragChunks] = await Promise.all([
           getPublicArticleMeta(),
           getAuthorSummary(),
-          tryVectorSearch(message, aiClient),
+          tryVectorSearch(message, aiClient, request.signal),
         ]);
 
         const usingRAG = ragChunks !== null && ragChunks.length > 0;
@@ -371,7 +392,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         if (!request.signal.aborted) {
           flushBufferedChunk();
-          console.error("AI 看板娘流式对话失败:", error);
+          console.error("AI 对话流式对话失败:", error);
           sendEvent("error", { message: getErrorMessage(error) });
         }
       } finally {

@@ -46,7 +46,7 @@
 
 | 类别 | 技术 | 说明 |
 |------|------|------|
-| 大模型 | **Kimi（Moonshot）** | 通过 **OpenAI 兼容 SDK**（`openai` 包）调用，`KIMI_BASE_URL` / `KIMI_MODEL` 可配 |
+| 大模型 | **OpenAI 兼容对话 API** | 通过 **OpenAI 兼容 SDK**（`openai` 包）调用；密钥与地址由 `CHAT_API_KEY`、`CHAT_BASE_URL`、`CHAT_MODEL` 配置（可对接任意 OpenAI 兼容端点） |
 | 嵌入向量 | **Ollama** | 默认模型如 `nomic-embed-text`，HTTP 接口由 `OLLAMA_BASE_URL` 指定 |
 | 向量库 | **ChromaDB** | Node 客户端 `chromadb`，需可访问的 `CHROMADB_HOST` / `CHROMADB_PORT` |
 
@@ -68,7 +68,7 @@
 
 以下为**可选**（不装则对应功能不可用或降级）：
 
-- **Kimi API Key**：AI 写作、流式对话、RAG 生成答案  
+- **`CHAT_API_KEY` 等对话配置**：AI 写作、流式对话、RAG 生成答案  
 - **Ollama**：生成文章块嵌入  
 - **ChromaDB**：存储与检索向量；可用 Docker 跑官方镜像  
 
@@ -103,12 +103,12 @@ ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="你的安全密码"
 ```
 
-**若使用 AI 写作与对话（Kimi）**，追加例如：
+**若使用 AI 写作与对话**，追加例如（以下为阿里云 **DashScope** 兼容模式示例；亦可将 `CHAT_BASE_URL` / `CHAT_MODEL` 换成其它 OpenAI 兼容服务）：
 
 ```bash
-KIMI_API_KEY="你的 Moonshot API Key"
-KIMI_BASE_URL="https://api.moonshot.cn/v1"
-KIMI_MODEL="moonshot-v1-32k"
+CHAT_API_KEY="你的 DashScope API Key"
+CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+CHAT_MODEL="qwen3.5-flash"
 ```
 
 **若使用 RAG（向量索引 + 检索问答）**，追加例如：
@@ -119,6 +119,14 @@ OLLAMA_EMBEDDING_MODEL="nomic-embed-text"
 
 CHROMADB_HOST="localhost"
 CHROMADB_PORT="8000"
+
+# 可选：检索结果重排序（与对话类似，需兼容的重排序 API，如阿里云 DashScope）
+# RAG_RERANK_API_KEY="..."
+# RAG_RERANK_BASE_URL="https://dashscope.aliyuncs.com/compatible-api/v1"
+# RAG_RERANK_MODEL="qwen3-rerank"
+# RAG_RERANK_DISABLED=false
+# RAG_RERANK_RECALL_K=10
+# RAG_RERANK_TOP_K=3
 ```
 
 ### 3. 初始化数据库
@@ -191,17 +199,59 @@ npm run start
 
 ---
 
-## 仓库结构（速览）
+## 目录与架构（供维护参考）
+
+### 路径别名
+
+TypeScript 配置中 **`@/` 指向项目根目录**（不是 `src/`），导入形如 `@/components/...`、`@/lib/...`。
+
+### 认证与路由
+
+- **`middleware.ts`**：配合 NextAuth `withAuth` 拦截 **`/admin/**`** 与 **`/api/admin/**`**。
+- **`lib/auth.ts`**：Credentials + JWT；`authorize` 仅允许 **`role === "ADMIN"`** 的用户登录。JWT 载荷含 `id`、`username`、`role`、`displayName`。
+
+### API 约定
+
+- **公开接口**：`app/api/` 下如 `posts`、`categories`、`profile` 等，供前台调用。
+- **管理端接口**：`app/api/admin/**`，需在请求中携带有效会话。
+- **AI 流式响应**：写作与对话等路由使用 **`Content-Type: text/event-stream`（SSE）**，例如 `app/api/ai/write/` 下的生成与补全、`app/api/ai/companion/chat/stream`。
+
+### AI 子系统（概要）
+
+| 能力 | 说明 |
+|------|------|
+| 对话 / 续写 | OpenAI 兼容 HTTP API，`CHAT_API_KEY`、`CHAT_BASE_URL`、`CHAT_MODEL`；`lib/ai/client.ts` 中 **`getAIClient()`** 返回单例 **`ChatClient`**。 |
+| 向量嵌入 | **Ollama**（`OLLAMA_*`），由同一客户端上的 **`embed()`** 调用，**不经过**对话端点。 |
+| 向量库 | **ChromaDB**（`CHROMADB_*`），见 `lib/vector/`。 |
+| RAG 重排序（可选） | `lib/ai/rerank.ts`，环境变量 **`RAG_RERANK_*`**（见上文环境变量示例）。 |
+
+### 编辑器与站内图片
+
+- **后台编辑器**：**Tiptap** + `tiptap-markdown`；AI 补全通过 `lib/editor/` 调用 **`/api/ai/write/complete`**。
+- **文章图片**：上传文件位于 **`public/images/posts/{slug}/`**，由 `Image` 模型记录元数据（含 COVER / CONTENT 等类型）。
+
+### 目录结构（速览）
 
 ```
-app/                 # 页面与 API（App Router）
-  admin/             # 后台页面（受保护）
-  api/               # Route Handlers（含 auth、posts、admin、ai）
-components/          # 前台 / 后台 / 聊天浮窗等
-lib/                 # 工具、auth、ai、vector、editor 等
-prisma/              # schema、seed
-middleware.ts        # 路由与 API 访问控制
-public/              # 静态资源（含文章图片目录等）
+app/                      # App Router：页面与 API
+  admin/                  # 后台 CMS（受保护）
+  api/
+    auth/                 # NextAuth
+    posts/ categories/ profile/   # 公开 REST
+    admin/                # 管理端 CRUD（需登录）
+    ai/
+      write/              # AI 写作：generate / complete（流式）
+      companion/          # RAG：文章列表、chat/stream（流式）
+components/               # admin、chat、layout、markdown、ui 等
+lib/
+  auth.ts prisma.ts utils.ts
+  ai/                     # client、companion、prompts、rerank 等
+  vector/                 # chunker、Chroma 封装、indexer
+  editor/                 # Tiptap AI 补全扩展
+hooks/ types/
+prisma/                   # schema、seed
+middleware.ts
+public/                   # 静态资源；文章图片见上
 ```
 
-更细的模块说明见仓库内 `CLAUDE.md`。
+面向自动化工具的 Next.js 版本说明见仓库根目录 **`AGENTS.md`**。
