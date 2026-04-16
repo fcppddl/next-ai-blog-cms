@@ -50,7 +50,7 @@ export default function AdminProfileCard() {
     return (
       <div className="w-64 flex-shrink-0">
         <div className="sticky top-24 animate-pulse">
-          <div className="h-96 rounded-2xl bg-muted" />
+          <div className="h-96 rounded-[16px] border border-[#E0E0E0] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:border-border dark:bg-card" />
         </div>
       </div>
     );
@@ -59,63 +59,55 @@ export default function AdminProfileCard() {
   return (
     <aside className="w-64 flex-shrink-0">
       <div className="sticky top-24">
-        {/* Unified Profile + Categories Card */}
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          {/* Gradient Header */}
-          <div className="h-24 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600" />
-
-          {/* Content */}
-          <div className="px-6 pb-6 relative z-10">
-            {/* Avatar — overlapping header */}
-            <div className="flex justify-center -mt-10 mb-3">
+        <div className="overflow-hidden rounded-[16px] border border-[#E0E0E0] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] dark:border-border dark:bg-card dark:shadow-sm dark:hover:shadow-md">
+          <div className="px-6 pb-6 pt-8">
+            <div className="mb-4 flex justify-center">
               {profile.avatar ? (
-                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-4 border-card shadow-md">
+                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-4 border-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06] dark:border-card dark:ring-white/10">
                   <Image
                     src={profile.avatar}
                     alt={profile.displayName}
                     width={80}
                     height={80}
-                    className="object-cover w-full h-full"
+                    className="h-full w-full object-cover"
                   />
                 </div>
               ) : (
-                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border-4 border-card bg-gradient-to-br from-cyan-400 to-blue-600 text-2xl font-bold text-white shadow-md">
+                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border-4 border-white bg-primary/90 text-2xl font-bold text-primary-foreground shadow-[0_4px_14px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06] dark:border-card">
                   {profile.displayName[0]?.toUpperCase()}
                 </div>
               )}
             </div>
 
-            {/* Name & username */}
-            <div className="mb-4 text-center">
-              <h2 className="text-base font-semibold leading-tight text-foreground">
+            <div className="mb-5 text-center">
+              <h2 className="text-base font-semibold leading-tight text-[#333333] dark:text-foreground">
                 {profile.displayName}
               </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-[#8C8C8C] dark:text-muted-foreground">
                 @{profile.username}
               </p>
               {profile.bio && (
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-3 text-sm leading-relaxed text-[#595959] dark:text-muted-foreground">
                   {profile.bio}
                 </p>
               )}
             </div>
 
-            {/* Stats */}
-            <div className="mb-4 flex items-stretch justify-center gap-8 border-y border-border py-4">
+            <div className="mb-5 flex items-stretch justify-center gap-8 border-y border-[#E0E0E0] py-4 dark:border-border">
               <div className="text-center">
-                <span className="block text-2xl font-bold leading-none text-foreground">
+                <span className="block text-2xl font-bold leading-none text-[#262626] dark:text-foreground">
                   {profile.stats.posts}
                 </span>
-                <span className="mt-1.5 flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                <span className="mt-1.5 flex items-center justify-center gap-1 text-xs text-[#8C8C8C] dark:text-muted-foreground">
                   <BookOpen className="h-3 w-3" /> 文章
                 </span>
               </div>
-              <div className="w-px self-stretch bg-border" />
+              <div className="w-px self-stretch bg-[#E0E0E0] dark:bg-border" />
               <div className="text-center">
-                <span className="block text-2xl font-bold leading-none text-foreground">
+                <span className="block text-2xl font-bold leading-none text-[#262626] dark:text-foreground">
                   {profile.stats.views}
                 </span>
-                <span className="mt-1.5 flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                <span className="mt-1.5 flex items-center justify-center gap-1 text-xs text-[#8C8C8C] dark:text-muted-foreground">
                   <Eye className="h-3 w-3" /> 阅读
                 </span>
               </div>

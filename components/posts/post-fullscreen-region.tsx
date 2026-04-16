@@ -16,7 +16,9 @@ type FullscreenContextValue = {
   isFullscreen: boolean;
 };
 
-const PostFullscreenContext = createContext<FullscreenContextValue | null>(null);
+const PostFullscreenContext = createContext<FullscreenContextValue | null>(
+  null,
+);
 
 /** 包裹正文区域，对该 DOM 节点请求浏览器全屏（不含顶栏导航） */
 export function PostFullscreenRegion({ children }: { children: ReactNode }) {
@@ -30,7 +32,8 @@ export function PostFullscreenRegion({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.addEventListener("fullscreenchange", syncFullscreen);
-    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreen);
   }, [syncFullscreen]);
 
   const toggle = useCallback(async () => {
@@ -49,9 +52,10 @@ export function PostFullscreenRegion({ children }: { children: ReactNode }) {
 
   return (
     <PostFullscreenContext.Provider value={{ toggle, isFullscreen }}>
+      {/* — 与 PublicLayout 一致：正文区不铺纯白 bg-background，避免与灰底割裂；全屏时单独铺底 */}
       <div
         ref={regionRef}
-        className="mx-auto max-w-5xl bg-background px-4 pt-5 pb-10 [&:fullscreen]:box-border [&:fullscreen]:min-h-screen [&:fullscreen]:overflow-y-auto [&:fullscreen]:pt-6"
+        className="mx-auto max-w-5xl bg-transparent px-4 pt-5 pb-10 [&:fullscreen]:box-border [&:fullscreen]:min-h-screen [&:fullscreen]:overflow-y-auto [&:fullscreen]:bg-gray-50 [&:fullscreen]:pt-6 dark:[&:fullscreen]:bg-[#0b0e14]"
       >
         {children}
       </div>

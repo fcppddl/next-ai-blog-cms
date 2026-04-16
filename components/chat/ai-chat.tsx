@@ -526,7 +526,7 @@ export default function AIChatWidget() {
     <div className="fixed right-4 bottom-5 z-[70] flex flex-col items-end gap-3">
       {/* Chat panel */}
       {open && (
-        <div className="w-[min(92vw,360px)] h-[min(74vh,540px)] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden">
+        <div className="w-[min(92vw,400px)] h-[min(78vh,650px)] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/30 flex-shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -650,7 +650,6 @@ export default function AIChatWidget() {
                                   <Link
                                     key={s.slug}
                                     href={`/posts/${s.slug}`}
-                                    target="_blank"
                                     className="inline-flex items-center gap-1 rounded border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer max-w-[140px]"
                                   >
                                     <FileText className="h-2.5 w-2.5 flex-shrink-0" />

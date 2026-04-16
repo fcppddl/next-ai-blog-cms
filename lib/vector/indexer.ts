@@ -7,7 +7,10 @@ export interface IndexOptions {
   force?: boolean;
 }
 
-export async function indexPost(postId: string, options: IndexOptions = {}): Promise<void> {
+export async function indexPost(
+  postId: string,
+  options: IndexOptions = {},
+): Promise<void> {
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
@@ -18,7 +21,9 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
 
   if (!post) throw new Error("文章不存在");
 
-  const existingIndex = await prisma.postVectorIndex.findUnique({ where: { postId } });
+  const existingIndex = await prisma.postVectorIndex.findUnique({
+    where: { postId },
+  });
   if (existingIndex && !options.force) {
     console.log(`[RAG] 文章 ${postId} 已索引，跳过`);
     return;
@@ -30,7 +35,9 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
     return;
   }
 
-  console.log(`[RAG] 文章 "${post.title}" 分为 ${chunks.length} 块，开始生成 embedding...`);
+  console.log(
+    `[RAG] 文章 "${post.title}" 分为 ${chunks.length} 块，开始生成 embedding...`,
+  );
 
   const aiClient = getAIClient();
   const vectors: Array<{
@@ -43,6 +50,7 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     const chunkEmbeddings = await aiClient.embed(chunk.content);
+    // console.log("chunkEmbeddings", chunkEmbeddings);
 
     if (chunkEmbeddings.length === 1) {
       vectors.push({
@@ -60,7 +68,9 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
         document: chunk.content,
       });
     } else {
-      console.warn(`[RAG] 块 ${chunk.index} 被切分为 ${chunkEmbeddings.length} 个子块`);
+      console.warn(
+        `[RAG] 块 ${chunk.index} 被切分为 ${chunkEmbeddings.length} 个子块`,
+      );
 
       const MAX_CHUNK_SIZE = 800;
       const chunkOverlap = 50;
@@ -72,7 +82,8 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
         subChunks.push(chunk.content.slice(start, end));
         start = end - chunkOverlap;
         if (start >= chunk.content.length - chunkOverlap) {
-          if (end < chunk.content.length) subChunks.push(chunk.content.slice(start));
+          if (end < chunk.content.length)
+            subChunks.push(chunk.content.slice(start));
           break;
         }
       }
@@ -91,7 +102,9 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
             category: post.category?.name || "",
             tags: post.tags.map((pt) => pt.tag.name).join(","),
           },
-          document: subChunks[j] || chunk.content.slice(j * MAX_CHUNK_SIZE, (j + 1) * MAX_CHUNK_SIZE),
+          document:
+            subChunks[j] ||
+            chunk.content.slice(j * MAX_CHUNK_SIZE, (j + 1) * MAX_CHUNK_SIZE),
         });
       }
     }
@@ -109,18 +122,29 @@ export async function indexPost(postId: string, options: IndexOptions = {}): Pro
   await prisma.postVectorIndex.upsert({
     where: { postId },
     create: { postId, vectorId: vectorIds[0], chunkCount: chunks.length },
-    update: { vectorId: vectorIds[0], chunkCount: chunks.length, updatedAt: new Date() },
+    update: {
+      vectorId: vectorIds[0],
+      chunkCount: chunks.length,
+      updatedAt: new Date(),
+    },
   });
 
-  console.log(`文章 ${postId} 索引完成: ${chunks.length} 个语义块, ${vectors.length} 个向量`);
+  console.log(
+    `文章 ${postId} 索引完成: ${chunks.length} 个语义块, ${vectors.length} 个向量`,
+  );
 }
 
 export async function deletePostIndex(postId: string): Promise<void> {
-  const existingIndex = await prisma.postVectorIndex.findUnique({ where: { postId } });
+  const existingIndex = await prisma.postVectorIndex.findUnique({
+    where: { postId },
+  });
   if (!existingIndex) return;
 
   const vectorStore = getVectorStore();
-  const idsToDelete = Array.from({ length: existingIndex.chunkCount }, (_, i) => `${postId}_${i}`);
+  const idsToDelete = Array.from(
+    { length: existingIndex.chunkCount },
+    (_, i) => `${postId}_${i}`,
+  );
   await vectorStore.delete(idsToDelete);
   await prisma.postVectorIndex.delete({ where: { postId } });
 
@@ -147,7 +171,9 @@ export async function indexAllPosts(options: IndexOptions = {}): Promise<{
 
   for (const post of posts) {
     try {
-      const existingIndex = await prisma.postVectorIndex.findUnique({ where: { postId: post.id } });
+      const existingIndex = await prisma.postVectorIndex.findUnique({
+        where: { postId: post.id },
+      });
       if (existingIndex && !options.force) {
         skipped++;
         continue;
@@ -164,6 +190,13 @@ export async function indexAllPosts(options: IndexOptions = {}): Promise<{
     }
   }
 
-  console.log(`[RAG] 索引完成: ${indexed} 成功, ${skipped} 跳过, ${failed} 失败`);
-  return { indexed, skipped, failed, errors: errors.length > 0 ? errors : undefined };
+  console.log(
+    `[RAG] 索引完成: ${indexed} 成功, ${skipped} 跳过, ${failed} 失败`,
+  );
+  return {
+    indexed,
+    skipped,
+    failed,
+    errors: errors.length > 0 ? errors : undefined,
+  };
 }
