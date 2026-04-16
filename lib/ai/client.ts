@@ -1,4 +1,122 @@
 import OpenAI from "openai";
+import { getExpectedEmbeddingDimensions } from "@/lib/vector/embedding-dim";
+
+const DEFAULT_EMBEDDING_BASE_URL =
+  "https://dashscope.aliyuncs.com/compatible-mode/v1";
+
+function getEmbeddingApiKey(): string | undefined {
+  const k = process.env.EMBEDDING_API_KEY?.trim();
+  return k || undefined;
+}
+
+function getEmbeddingBaseUrl(): string {
+  return process.env.EMBEDDING_BASE_URL?.trim() || DEFAULT_EMBEDDING_BASE_URL;
+}
+
+async function createDashscopeEmbedding(
+  client: OpenAI,
+  model: string,
+  dimensions: number,
+  input: string,
+): Promise<number[]> {
+  let retries = 3;
+  let lastError: Error | null = null;
+
+  while (retries > 0) {
+    try {
+      const params: OpenAI.Embeddings.EmbeddingCreateParams = {
+        model,
+        input,
+        encoding_format: "float",
+      };
+      if (
+        model.includes("text-embedding-v3") ||
+        model.includes("text-embedding-v4")
+      ) {
+        params.dimensions = dimensions;
+      }
+
+      const response = await client.embeddings.create(params);
+      const emb = response.data[0]?.embedding;
+      if (!emb || !Array.isArray(emb)) {
+        throw new Error("百炼兼容接口返回的 embedding 数据无效");
+      }
+      return emb;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      retries--;
+      if (retries > 0) {
+        console.warn(
+          `[Embedding] 请求失败，剩余重试 ${retries}，错误: ${lastError.message}`,
+        );
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+  }
+
+  throw new Error(
+    `向量模型调用失败: ${lastError?.message}，请检查 EMBEDDING_API_KEY / EMBEDDING_BASE_URL / EMBEDDING_MODEL`,
+  );
+}
+
+/** 百炼 OpenAI 兼容 Embeddings（如 text-embedding-v4） */
+async function dashscopeCompatibleEmbed(
+  text: string | string[],
+  model: string,
+): Promise<number[][]> {
+  const apiKey = getEmbeddingApiKey();
+  if (!apiKey) {
+    throw new Error("已配置 EMBEDDING_MODEL，请配置 EMBEDDING_API_KEY");
+  }
+
+  const client = new OpenAI({
+    apiKey,
+    baseURL: getEmbeddingBaseUrl(),
+  });
+  const dimensions = getExpectedEmbeddingDimensions();
+  const texts = Array.isArray(text) ? text : [text];
+  const embeddings: number[][] = [];
+
+  const MAX_CHUNK_SIZE = 800;
+  const chunkOverlap = 50;
+
+  for (const t of texts) {
+    if (t.length <= MAX_CHUNK_SIZE) {
+      const embedding = await createDashscopeEmbedding(
+        client,
+        model,
+        dimensions,
+        t,
+      );
+      embeddings.push(embedding);
+    } else {
+      const chunks: string[] = [];
+      let start = 0;
+
+      while (start < t.length) {
+        const end = Math.min(start + MAX_CHUNK_SIZE, t.length);
+        chunks.push(t.slice(start, end));
+        start = end - chunkOverlap;
+        if (start >= t.length - chunkOverlap) {
+          if (end < t.length) chunks.push(t.slice(start));
+          break;
+        }
+      }
+
+      for (const chunk of chunks) {
+        const embedding = await createDashscopeEmbedding(
+          client,
+          model,
+          dimensions,
+          chunk,
+        );
+        embeddings.push(embedding);
+      }
+    }
+  }
+
+  return embeddings;
+}
 
 export interface AIClient {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
@@ -203,6 +321,10 @@ class ChatClient implements AIClient {
   }
 
   async embed(text: string | string[]): Promise<number[][]> {
+    const model = process.env.EMBEDDING_MODEL?.trim();
+    if (model) {
+      return dashscopeCompatibleEmbed(text, model);
+    }
     return ollamaEmbed(text);
   }
 }
