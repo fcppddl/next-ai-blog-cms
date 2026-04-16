@@ -6,10 +6,7 @@ import { Menu, X, PenSquare } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import AIChatWidget from "@/components/chat/ai-chat";
 
-const navLinks = [
-  { href: "/", label: "首页" },
-  { href: "/about", label: "关于" },
-];
+const navLinks = [{ href: "/about", label: "关于" }];
 
 export default function PublicLayout({
   children,
@@ -26,7 +23,7 @@ export default function PublicLayout({
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-gray-50 text-foreground dark:bg-[#0b0e14]">
       {/* Header — 与后台管理同样使用主题变量，暗色为 navy 系 */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
@@ -38,9 +35,20 @@ export default function PublicLayout({
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link
             href="/"
-            className="text-xl font-bold tracking-tight text-foreground transition-colors hover:text-muted-foreground"
+            className="group flex items-center gap-2 transition-opacity hover:opacity-90"
+            aria-label="码界空间首页"
           >
-            AI Blog
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="block h-9 w-9 shrink-0 bg-transparent"
+            />
+            <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              码界空间
+            </span>
           </Link>
 
           {/* Desktop Nav */}
