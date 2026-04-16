@@ -7,7 +7,10 @@ import PublicLayout from "@/components/layout/public-layout";
 import MarkdownRenderer from "@/components/markdown/markdown-renderer";
 import RelatedPosts from "@/components/posts/related-posts";
 import { Badge } from "@/components/ui/badge";
-import { PostFullscreenRegion, PostFullscreenToggle } from "@/components/posts/post-fullscreen-region";
+import {
+  PostFullscreenRegion,
+  PostFullscreenToggle,
+} from "@/components/posts/post-fullscreen-region";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -22,7 +25,9 @@ async function getPost(slug: string) {
   return res.json();
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) return { title: "Post Not Found" };
@@ -61,22 +66,29 @@ export default async function PostPage({ params }: PageProps) {
         <header className="mb-10">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {post.category && (
-              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15">
+              <Badge
+                variant="outline"
+                className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+              >
                 {post.category.name}
               </Badge>
             )}
-            {post.tags?.map(({ tag: t }: { tag: { name: string; slug: string } }) => (
-              <span
-                key={t.slug}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-              >
-                <Tag className="h-3 w-3" />
-                {t.name}
-              </span>
-            ))}
+            {post.tags?.map(
+              ({ tag: t }: { tag: { name: string; slug: string } }) => (
+                <span
+                  key={t.slug}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                >
+                  <Tag className="h-3 w-3" />
+                  {t.name}
+                </span>
+              ),
+            )}
           </div>
 
-          <h1 className="mb-6 text-4xl font-black leading-tight text-foreground">{post.title}</h1>
+          <h1 className="mb-6 text-4xl font-black leading-tight text-foreground">
+            {post.title}
+          </h1>
 
           <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
@@ -103,6 +115,7 @@ export default async function PostPage({ params }: PageProps) {
                 fill
                 className="object-cover"
                 priority
+                unoptimized={post.coverImage.startsWith("/images/")}
               />
             </div>
           )}

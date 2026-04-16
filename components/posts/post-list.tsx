@@ -115,6 +115,7 @@ export default function PostList({ category, tag }: PostListProps) {
                       fill
                       sizes="(min-width: 640px) 160px, 100vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      unoptimized={post.coverImage!.startsWith("/images/")}
                     />
                   </div>
                 )}

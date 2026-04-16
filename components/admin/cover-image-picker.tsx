@@ -56,7 +56,13 @@ export default function CoverImagePicker({
         /* Preview */
         <div className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600">
           <div className="relative w-full h-36">
-            <Image src={value} alt="封面预览" fill className="object-cover" />
+            <Image
+              src={value}
+              alt="封面预览"
+              fill
+              className="object-cover"
+              unoptimized={value.startsWith("/images/")}
+            />
           </div>
           {/* Overlay actions */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
