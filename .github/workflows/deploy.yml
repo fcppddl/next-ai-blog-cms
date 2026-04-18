@@ -1,5 +1,6 @@
 # AIGC START
-# 部署：CI 在 main 上成功后通过 SSH 在自建机上拉代码并构建重启
+# 部署（npm + pm2）：已默认关闭自动触发；当前自动部署请用 deploy-docker.yml + docker-publish.yml。
+# 本文件仅保留「手动运行」以便紧急回滚旧方式。若完全不用可删除本文件。
 # 若你使用 Vercel / Railway 等，可删掉本文件，在对应平台连接 GitHub 即可
 #
 # Secrets：SSH_HOST、SSH_USERNAME、SSH_PASSWORD 或 SSH_PRIVATE_KEY、DEPLOY_PATH。
@@ -8,9 +9,7 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  # 已禁用 CI 通过后自动部署（避免与 Deploy Docker 重复）。仅 Actions 里手动「Run workflow」会执行。
   workflow_dispatch:
 
 concurrency:
@@ -20,12 +19,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # 仅：main 上 CI 成功后的自动部署，或手动运行
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
-
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0

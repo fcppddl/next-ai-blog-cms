@@ -37,7 +37,7 @@ const MAX_HISTORY_MESSAGES = 12;
 const MAX_HISTORY_MESSAGE_LENGTH = 1200;
 const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
 const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
-const RAG_TOP_K = parseInt(process.env.RAG_TOP_K || "3", 10);
+const RAG_TOP_K = parseInt(process.env.RAG_RERANK_TOP_K || "3", 10);
 
 function isCompanionMode(value: unknown): value is CompanionMode {
   return value === "articles" || value === "author" || value === "free";

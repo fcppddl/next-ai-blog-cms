@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# AIGC START
 # 在 Ubuntu + nvm 环境下由 GitHub Actions SSH 调用。
 # 非交互 shell 不会走 .bashrc 里「仅交互才加载」的分支，因此直接 source nvm.sh；
 # 仅加载 nvm 还不够时，需 nvm use 才会把 node/npm 放进 PATH。
@@ -60,4 +59,3 @@ npm ci
 npm run db:push:prod
 npm run build
 pm2 startOrReload ecosystem.config.js --update-env
-# AIGC END

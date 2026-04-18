@@ -1,0 +1,45 @@
+# push 到 main 时构建 Dockerfile 并推送到 Docker Hub（与本地 docker compose build 等价产物）
+name: Docker Publish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Image name（Docker Hub：仓库变量 DOCKERHUB_IMAGE 可覆盖，默认 用户名/仓库名小写）
+        id: meta
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_IMAGE_VAR: ${{ vars.DOCKERHUB_IMAGE }}
+        run: |
+          REPO=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')
+          if [ -n "$DH_IMAGE_VAR" ]; then
+            IMG="$DH_IMAGE_VAR"
+          else
+            IMG="${DH_USER}/${REPO}"
+          fi
+          echo "IMAGE=docker.io/${IMG}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.IMAGE }}:latest
+            ${{ steps.meta.outputs.IMAGE }}:${{ github.sha }}

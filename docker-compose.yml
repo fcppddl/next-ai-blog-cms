@@ -1,0 +1,58 @@
+# 用法：复制 .env.docker.example 为 .env.docker 并填写密钥后执行
+#   docker compose --env-file .env.docker up -d --build
+services:
+  chroma:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      - chroma-data:/chroma/chroma
+    ports:
+      - "8000:8000"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # 与 .env.local 对齐；DATABASE_URL / CHROMADB_* 由 Compose 固定（勿在 .env.docker 里覆盖 host）
+      DATABASE_URL: "file:/data/prod.db"
+      CHROMADB_HOST: chroma
+      CHROMADB_PORT: "8000"
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env.docker}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      CHAT_API_KEY: ${CHAT_API_KEY:-}
+      CHAT_BASE_URL: ${CHAT_BASE_URL:-}
+      CHAT_MODEL: ${CHAT_MODEL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      RAG_RERANK_API_KEY: ${RAG_RERANK_API_KEY:-}
+      RAG_RERANK_BASE_URL: ${RAG_RERANK_BASE_URL:-}
+      RAG_RERANK_MODEL: ${RAG_RERANK_MODEL:-}
+      RAG_RERANK_DISABLED: ${RAG_RERANK_DISABLED:-false}
+      RAG_RERANK_RECALL_K: ${RAG_RERANK_RECALL_K:-10}
+      RAG_RERANK_TOP_K: ${RAG_RERANK_TOP_K:-3}
+      RAG_TOP_K: ${RAG_TOP_K:-3}
+    volumes:
+      - app-data:/data
+      - app-covers:/app/public/images/covers
+      - app-posts:/app/public/images/posts
+    depends_on:
+      - chroma
+
+volumes:
+  app-data:
+  app-covers:
+  app-posts:
+  chroma-data:

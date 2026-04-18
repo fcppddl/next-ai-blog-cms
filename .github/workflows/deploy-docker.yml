@@ -1,0 +1,52 @@
+# Docker Publish 成功后 SSH 到服务器执行 pull + up（与基于 npm/pm2 的 deploy.yml 二选一）
+name: Deploy Docker
+
+on:
+  workflow_run:
+    workflows: ["Docker Publish"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-docker-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+
+    steps:
+      - name: Image ref（须与 Docker Publish 一致）
+        id: meta
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_IMAGE_VAR: ${{ vars.DOCKERHUB_IMAGE }}
+        run: |
+          REPO=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')
+          if [ -n "$DH_IMAGE_VAR" ]; then
+            IMG="$DH_IMAGE_VAR"
+          else
+            IMG="${DH_USER}/${REPO}"
+          fi
+          echo "IMAGE=docker.io/${IMG}:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          # 国内/弱网下 docker pull 多层镜像可能超过半小时，勿过短
+          command_timeout: 2h
+          script_stop: true
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            export APP_IMAGE="${{ steps.meta.outputs.IMAGE }}"
+            export DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}"
+            export DOCKERHUB_TOKEN="${{ secrets.DOCKERHUB_TOKEN }}"
+            bash scripts/deploy-docker-remote.sh

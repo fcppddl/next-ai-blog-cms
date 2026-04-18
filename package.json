@@ -16,7 +16,9 @@
     "db:seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
     "db:reset-admin": "dotenv -e .env.local -- tsx prisma/reset-admin.ts",
     "db:studio": "dotenv -e .env.local -- prisma studio",
-    "db:reset": "dotenv -e .env.local -- prisma migrate reset --force && npm run db:seed"
+    "db:reset": "dotenv -e .env.local -- prisma migrate reset --force && npm run db:seed",
+    "docker:up": "docker compose --env-file .env.docker up -d --build",
+    "docker:down": "docker compose --env-file .env.docker down"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.docker.example
+Dockerfile*
+docker-compose*.yml
+.npmrc
+.cursor
