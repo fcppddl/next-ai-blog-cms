@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { ImagePlus, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,64 +16,30 @@ export default function CoverImagePicker({
 }: CoverImagePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  // — 本地上传后立即用 blob 预览；成功后用 ?cb= 打破 Next 路由缓存；justUploaded 解决表单 value 滞后一帧
-  const [localPreview, setLocalPreview] = useState<string | null>(null);
-  const [uploadCacheBust, setUploadCacheBust] = useState(0);
-  const [justUploaded, setJustUploaded] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (justUploaded !== null && value === justUploaded) {
-      setJustUploaded(null);
-    }
-  }, [value, justUploaded]);
-
   const { toast } = useToast();
-
-  const coverDisplaySrc = (() => {
-    if (localPreview) return localPreview;
-    const path = justUploaded ?? value;
-    if (!path.startsWith("/images/") || !uploadCacheBust) return path || value;
-    return `${path}${path.includes("?") ? "&" : "?"}cb=${uploadCacheBust}`;
-  })();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const blobUrl = URL.createObjectURL(file);
-    setLocalPreview(blobUrl);
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
-      const res = await fetch("/api/admin/posts/cover-upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
+    const res = await fetch("/api/admin/posts/cover-upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
 
-      if (res.ok) {
-        const bust = Date.now();
-        onChange(data.url);
-        setUploadCacheBust(bust);
-        setJustUploaded(data.url);
-        URL.revokeObjectURL(blobUrl);
-        setLocalPreview(null);
-      } else {
-        URL.revokeObjectURL(blobUrl);
-        setLocalPreview(null);
-        toast({ title: data.error ?? "上传失败", variant: "destructive" });
-      }
-    } catch {
-      URL.revokeObjectURL(blobUrl);
-      setLocalPreview(null);
-      toast({ title: "上传失败", variant: "destructive" });
-    } finally {
-      setUploading(false);
-      // Reset so re-selecting same file triggers onChange
-      e.target.value = "";
+    if (res.ok) {
+      onChange(data.url);
+    } else {
+      toast({ title: data.error ?? "上传失败", variant: "destructive" });
     }
+    setUploading(false);
+    // Reset so re-selecting same file triggers onChange
+    e.target.value = "";
   };
 
   return (
@@ -86,16 +52,16 @@ export default function CoverImagePicker({
         onChange={handleFileChange}
       />
 
-      {value || localPreview ? (
+      {value ? (
         /* Preview */
         <div className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600">
           <div className="relative w-full h-36">
             <Image
-              src={coverDisplaySrc}
+              src={value}
               alt="封面预览"
               fill
               className="object-cover"
-              unoptimized
+              unoptimized={value.startsWith("/images/")}
             />
           </div>
           {/* Overlay actions */}
@@ -115,11 +81,7 @@ export default function CoverImagePicker({
             </button>
             <button
               type="button"
-              onClick={() => {
-                onChange("");
-                setUploadCacheBust(0);
-                setJustUploaded(null);
-              }}
+              onClick={() => onChange("")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/90 text-red-600 text-xs font-medium hover:bg-white transition-colors cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
