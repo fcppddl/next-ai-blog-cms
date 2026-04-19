@@ -29,14 +29,23 @@ export const AICompletion = Extension.create({
 
           apply(tr, value, _old, newState) {
             // Explicit state updates via transaction metadata
-            if (tr.getMeta("ai-clear")) return { suggestion: null, position: null };
-            if (tr.getMeta("ai-accept")) return { suggestion: null, position: null };
+            if (tr.getMeta("ai-clear"))
+              return { suggestion: null, position: null };
+            // Tab 接受会带 ai-accept 且同时改文档；若此处直接 return，会跳过下方 docChanged
+            // 分支，导致不会再次调度补全。仅在无文档变更时清空并返回。
+            if (tr.getMeta("ai-accept") && !tr.docChanged) {
+              return { suggestion: null, position: null };
+            }
             const upd = tr.getMeta("ai-update");
-            if (upd) return { suggestion: upd.suggestion, position: upd.position };
+            if (upd)
+              return { suggestion: upd.suggestion, position: upd.position };
 
             if (!tr.docChanged) {
               // Cursor moved away from suggestion position → clear
-              if (value.position !== null && newState.selection.from !== value.position) {
+              if (
+                value.position !== null &&
+                newState.selection.from !== value.position
+              ) {
                 return { suggestion: null, position: null };
               }
               return value;
@@ -49,8 +58,12 @@ export const AICompletion = Extension.create({
             const { from, to } = newState.selection;
             if (from !== to) return { suggestion: null, position: null }; // text selected
 
-            const textBefore = newState.doc.textBetween(Math.max(0, from - 500), from);
-            if (textBefore.trim().length < 10) return { suggestion: null, position: null };
+            const textBefore = newState.doc.textBetween(
+              Math.max(0, from - 500),
+              from,
+            );
+            if (textBefore.trim().length < 2)
+              return { suggestion: null, position: null };
 
             const cursorAt = from;
             debounceTimer = setTimeout(async () => {
@@ -61,7 +74,10 @@ export const AICompletion = Extension.create({
                 const res = await fetch("/api/ai/write/complete", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ content: fullText, cursorPosition: cursorAt }),
+                  body: JSON.stringify({
+                    content: fullText,
+                    cursorPosition: cursorAt,
+                  }),
                   signal: ctrl.signal,
                 });
                 if (!res.ok) return;
@@ -73,10 +89,14 @@ export const AICompletion = Extension.create({
                 const current = ext.editor.state;
                 if (current.selection.from !== cursorAt) return;
 
-                const t = current.tr.setMeta("ai-update", { suggestion: text, position: cursorAt });
+                const t = current.tr.setMeta("ai-update", {
+                  suggestion: text,
+                  position: cursorAt,
+                });
                 ext.editor.view.dispatch(t);
               } catch (e) {
-                if ((e as Error).name !== "AbortError") console.error("[AI completion]", e);
+                if ((e as Error).name !== "AbortError")
+                  console.error("[AI completion]", e);
               }
             }, 800);
 
@@ -87,11 +107,17 @@ export const AICompletion = Extension.create({
         props: {
           decorations(state) {
             const ps = pluginKey.getState(state);
-            if (!ps?.suggestion || ps.position === null) return DecorationSet.empty;
+            if (!ps?.suggestion || ps.position === null)
+              return DecorationSet.empty;
 
             // Guard: position still valid and cursor hasn't moved
-            try { state.doc.resolve(ps.position); } catch { return DecorationSet.empty; }
-            if (state.selection.from !== ps.position) return DecorationSet.empty;
+            try {
+              state.doc.resolve(ps.position);
+            } catch {
+              return DecorationSet.empty;
+            }
+            if (state.selection.from !== ps.position)
+              return DecorationSet.empty;
 
             // Build inline ghost-text widget
             const wrap = document.createElement("span");
@@ -110,7 +136,10 @@ export const AICompletion = Extension.create({
             wrap.appendChild(hint);
 
             return DecorationSet.create(state.doc, [
-              Decoration.widget(ps.position, wrap, { side: 1, ignoreSelection: true }),
+              Decoration.widget(ps.position, wrap, {
+                side: 1,
+                ignoreSelection: true,
+              }),
             ]);
           },
         },
@@ -126,7 +155,9 @@ export const AICompletion = Extension.create({
 
         const { tr, selection } = editor.state;
         tr.insertText(ps.suggestion, selection.from);
-        tr.setSelection(TextSelection.create(tr.doc, selection.from + ps.suggestion.length));
+        tr.setSelection(
+          TextSelection.create(tr.doc, selection.from + ps.suggestion.length),
+        );
         tr.setMeta("ai-accept", true);
         editor.view.dispatch(tr);
         return true;

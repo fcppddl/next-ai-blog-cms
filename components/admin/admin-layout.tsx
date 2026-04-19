@@ -104,7 +104,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 className="block h-9 w-9 bg-transparent"
               />
               <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                码界空间
+                码界网
               </span>
               <span className="text-sm text-gray-400">| 管理后台</span>
             </div>

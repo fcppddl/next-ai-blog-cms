@@ -26,6 +26,7 @@ module.exports = {
         DATABASE_URL: process.env.DATABASE_URL,
         NEXTAUTH_URL: process.env.NEXTAUTH_URL,
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+        AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST,
         CHAT_API_KEY: process.env.CHAT_API_KEY,
         CHAT_BASE_URL: process.env.CHAT_BASE_URL,
         CHAT_MODEL: process.env.CHAT_MODEL,
