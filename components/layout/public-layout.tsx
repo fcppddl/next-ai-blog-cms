@@ -22,8 +22,9 @@ export default function PublicLayout({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // 短内容时页脚贴视口底部：flex 列 + main 伸展
   return (
-    <div className="relative min-h-screen bg-gray-50 text-foreground dark:bg-[#0b0e14]">
+    <div className="relative flex min-h-screen flex-col bg-gray-50 text-foreground dark:bg-[#0b0e14]">
       {/* Header — 与后台管理同样使用主题变量，暗色为 navy 系 */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
@@ -36,7 +37,7 @@ export default function PublicLayout({
           <Link
             href="/"
             className="group flex items-center gap-2 transition-opacity hover:opacity-90"
-            aria-label="码界空间首页"
+            aria-label="码界网首页"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -47,7 +48,7 @@ export default function PublicLayout({
               className="block h-9 w-9 shrink-0 bg-transparent"
             />
             <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              码界空间
+              码界网
             </span>
           </Link>
 
@@ -120,7 +121,7 @@ export default function PublicLayout({
       </header>
 
       {/* Main */}
-      <main className="relative z-10 pt-16">{children}</main>
+      <main className="relative z-10 flex-1 pt-16">{children}</main>
 
       {/* Footer */}
       <footer className="relative z-10 mt-12 border-t border-border py-5">

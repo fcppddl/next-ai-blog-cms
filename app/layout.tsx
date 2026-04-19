@@ -8,7 +8,7 @@ import PublicEffects from "@/components/layout/public-effects";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "码界空间",
+  title: "码界网",
   description: "基于 Next.js + AI 的现代化博客系统",
 };
 

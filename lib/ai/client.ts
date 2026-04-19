@@ -271,7 +271,8 @@ class ChatClient implements AIClient {
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 2000,
-    });
+      enable_thinking: false,
+    } as OpenAI.ChatCompletionCreateParamsNonStreaming);
 
     return {
       content: response.choices[0]?.message?.content || "",
@@ -287,6 +288,7 @@ class ChatClient implements AIClient {
     // 阿里云 compatible-mode 支持 enable_search，但 OpenAI SDK 类型未包含该字段，需与流式参数做交集
     const streamBody: OpenAI.ChatCompletionCreateParamsStreaming & {
       enable_search?: boolean;
+      enable_thinking?: boolean;
     } = {
       model: options.model || process.env.CHAT_MODEL || "",
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -294,6 +296,7 @@ class ChatClient implements AIClient {
       max_tokens: options.maxTokens ?? 2000,
       stream: true,
       enable_search: true,
+      enable_thinking: false,
     };
     const stream = await this.client.chat.completions.create(
       streamBody,
