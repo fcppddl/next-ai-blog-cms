@@ -10,6 +10,8 @@ import PublicLayout from "@/components/layout/public-layout";
 import AdminProfileCard from "@/components/profile/admin-profile-card";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 const sectionTitleClass =
   "m-0 text-xl font-semibold tracking-tight text-foreground md:text-2xl";
 
@@ -29,8 +31,6 @@ export default async function AboutPage() {
       ? githubRaw
       : `https://${githubRaw}`
     : null;
-
-  const techStackTags = ["TypeScript", "React", "Next.js"] as const;
 
   return (
     <PublicLayout>
