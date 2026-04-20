@@ -17,7 +17,7 @@ export async function GET() {
   ]);
 
   const email = user.profile?.email?.trim() || user.email?.trim() || undefined;
-  const phone = user.profile?.phone?.trim() || undefined;
+  const wechat = user.profile?.wechat?.trim() || undefined;
 
   return NextResponse.json({
     username: user.username,
@@ -25,10 +25,13 @@ export async function GET() {
     bio: user.profile?.bio,
     avatar: user.profile?.avatar,
     email,
-    phone,
+    wechat,
     github: user.profile?.github,
     twitter: user.profile?.twitter,
     website: user.profile?.website,
+    location: user.profile?.location?.trim() || undefined,
+    company: user.profile?.company?.trim() || undefined,
+    position: user.profile?.position?.trim() || undefined,
     stats: {
       posts: postCount,
       views: viewCount._sum.views ?? 0,

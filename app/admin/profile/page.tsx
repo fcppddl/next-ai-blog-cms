@@ -17,7 +17,7 @@ interface ProfileForm {
   bio: string;
   avatar: string;
   email: string;
-  phone: string;
+  wechat: string;
   github: string;
   twitter: string;
   website: string;
@@ -34,7 +34,7 @@ export default function ProfilePage() {
     bio: "",
     avatar: "",
     email: "",
-    phone: "",
+    wechat: "",
     github: "",
     twitter: "",
     website: "",
@@ -59,7 +59,7 @@ export default function ProfilePage() {
           bio: data.profile?.bio ?? "",
           avatar: data.profile?.avatar ?? "",
           email: data.profile?.email ?? "",
-          phone: data.profile?.phone ?? "",
+          wechat: data.profile?.wechat ?? data.profile?.phone ?? "",
           github: data.profile?.github ?? "",
           twitter: data.profile?.twitter ?? "",
           website: data.profile?.website ?? "",
@@ -243,7 +243,7 @@ export default function ProfilePage() {
             {(
               [
                 ["email", "邮箱", "your@email.com"],
-                ["phone", "手机号", "+86 138 0000 0000"],
+                ["wechat", "微信", "微信号"],
                 ["github", "GitHub", "https://github.com/username"],
                 ["twitter", "Twitter", "https://twitter.com/username"],
                 ["website", "个人网站", "https://yoursite.com"],
@@ -255,15 +255,9 @@ export default function ProfilePage() {
               <div key={key} className="space-y-2">
                 <Label>{label}</Label>
                 <Input
-                  type={
-                    key === "phone" ? "tel" : key === "email" ? "email" : "text"
-                  }
+                  type={key === "email" ? "email" : "text"}
                   autoComplete={
-                    key === "phone"
-                      ? "tel"
-                      : key === "email"
-                        ? "email"
-                        : undefined
+                    key === "email" ? "email" : undefined
                   }
                   value={form[key]}
                   onChange={handleChange(key)}

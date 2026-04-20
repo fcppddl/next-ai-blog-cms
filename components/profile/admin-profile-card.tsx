@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Globe, AtSign, Layers, Folder, Phone, Mail } from "lucide-react";
+import {
+  Globe,
+  AtSign,
+  Layers,
+  Folder,
+  MessageCircle,
+  Mail,
+  User,
+  MapPin,
+} from "lucide-react";
 
 interface ProfileData {
   username: string;
@@ -11,10 +20,11 @@ interface ProfileData {
   bio?: string;
   avatar?: string;
   email?: string;
-  phone?: string;
+  wechat?: string;
   github?: string;
   twitter?: string;
   website?: string;
+  location?: string;
 }
 
 function githubProfileHref(raw: string | undefined): string | null {
@@ -55,10 +65,11 @@ export default function AdminProfileCard() {
     );
   }
 
-  const phoneTrim = profile.phone?.trim() ?? "";
+  const wechatTrim = profile.wechat?.trim() ?? "";
   const emailTrim = profile.email?.trim() ?? "";
   const githubTrim = profile.github?.trim() ?? "";
   const githubHref = githubProfileHref(profile.github);
+  const locationTrim = profile.location?.trim() ?? "";
   const emptyMark = "-";
 
   return (
@@ -125,46 +136,52 @@ export default function AdminProfileCard() {
             )}
 
             <div
-              className={`space-y-2.5 ${categories.length > 0 ? "mb-4 border-b border-[#E0E0E0] pb-4 dark:border-border" : "mb-0"}`}
+              className={
+                categories.length > 0
+                  ? "mb-4 border-b border-[#E0E0E0] pb-4 dark:border-border"
+                  : "mb-0"
+              }
             >
-              <div className="flex items-start gap-2">
-                <Phone
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1 text-right text-xs leading-relaxed">
-                  {phoneTrim ? (
-                    <a
-                      href={`tel:${phoneTrim.replace(/\s/g, "")}`}
-                      className="break-all text-[#8C8C8C] transition-colors hover:text-foreground dark:text-muted-foreground"
-                    >
-                      {phoneTrim}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">{emptyMark}</span>
-                  )}
-                </div>
+              <div className="mb-2 flex items-center gap-1.5">
+                <User className="h-3 w-3 text-muted-foreground" aria-hidden />
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  个人信息
+                </span>
               </div>
-              <div className="flex items-start gap-2">
-                <Mail
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1 text-right text-xs leading-relaxed">
-                  {emailTrim ? (
-                    <a
-                      href={`mailto:${emailTrim}`}
-                      className="break-all text-[#8C8C8C] transition-colors hover:text-foreground dark:text-muted-foreground"
-                    >
-                      {emailTrim}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">{emptyMark}</span>
-                  )}
+              {/* — 与下方文章分类 Link 的 px-2 对齐左右边距 */}
+              <div className="space-y-2.5 px-2">
+                <div className="flex items-start gap-2">
+                  <MessageCircle
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1 text-right text-xs leading-relaxed text-[#8C8C8C] dark:text-muted-foreground">
+                    {wechatTrim ? (
+                      <span className="break-all">{wechatTrim}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{emptyMark}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                {
+                <div className="flex items-start gap-2">
+                  <Mail
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1 text-right text-xs leading-relaxed">
+                    {emailTrim ? (
+                      <a
+                        href={`mailto:${emailTrim}`}
+                        className="break-all text-[#8C8C8C] transition-colors hover:text-foreground dark:text-muted-foreground"
+                      >
+                        {emailTrim}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">{emptyMark}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
                   <svg
                     className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
                     viewBox="0 0 24 24"
@@ -173,20 +190,33 @@ export default function AdminProfileCard() {
                   >
                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                   </svg>
-                }
-                <div className="min-w-0 flex-1 text-right text-xs leading-relaxed">
-                  {githubTrim && githubHref ? (
-                    <a
-                      href={githubHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="break-all text-[#8C8C8C] transition-colors hover:text-foreground dark:text-muted-foreground"
-                    >
-                      {githubTrim}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">{emptyMark}</span>
-                  )}
+                  <div className="min-w-0 flex-1 text-right text-xs leading-relaxed">
+                    {githubTrim && githubHref ? (
+                      <a
+                        href={githubHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-all text-[#8C8C8C] transition-colors hover:text-foreground dark:text-muted-foreground"
+                      >
+                        {githubTrim}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">{emptyMark}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C8C8C] dark:text-muted-foreground"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1 text-right text-xs leading-relaxed text-[#8C8C8C] dark:text-muted-foreground">
+                    {locationTrim ? (
+                      <span className="break-words">{locationTrim}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{emptyMark}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -197,7 +227,7 @@ export default function AdminProfileCard() {
                 <div className="mb-2 flex items-center gap-1.5">
                   <Layers className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    分类
+                    文章分类
                   </span>
                 </div>
                 <nav className="space-y-0.5">
