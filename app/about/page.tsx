@@ -3,7 +3,6 @@ import {
   GraduationCap,
   Mail,
   MessageCircle,
-  Phone,
   Sparkles,
 } from "lucide-react";
 import PublicLayout from "@/components/layout/public-layout";
@@ -37,27 +36,10 @@ async function getContactRows(): Promise<ContactItem[]> {
   });
   const p = user?.profile;
 
-  const email = p?.email?.trim() || user?.email?.trim();
-  const emailRow: ContactItem = email
-    ? { label: "邮箱", value: email, href: `mailto:${email}` }
-    : { label: "邮箱", value: CONTACT_EMPTY };
-
-  const phoneRaw = p?.phone?.trim();
-  const phoneRow: ContactItem = phoneRaw
-    ? {
-        label: "电话",
-        value: phoneRaw,
-        href: `tel:${phoneRaw.replace(/\s/g, "")}`,
-      }
-    : { label: "电话", value: CONTACT_EMPTY };
-
   return [
-    emailRow,
-    phoneRow,
     rowText("微信", p?.wechat),
     rowText("QQ", p?.qq),
     rowUrl("个人网站", p?.website),
-    rowUrl("GitHub", p?.github),
     rowUrl("Twitter / X", p?.twitter),
     rowUrl("微博", p?.weibo),
     rowUrl("哔哩哔哩", p?.bilibili),
@@ -153,12 +135,6 @@ export default async function AboutPage() {
                       className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4"
                     >
                       <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground sm:w-32">
-                        {item.label === "邮箱" && (
-                          <Mail className="h-3.5 w-3.5" aria-hidden />
-                        )}
-                        {item.label === "电话" && (
-                          <Phone className="h-3.5 w-3.5" aria-hidden />
-                        )}
                         {(item.label === "微信" || item.label === "QQ") && (
                           <MessageCircle className="h-3.5 w-3.5" aria-hidden />
                         )}

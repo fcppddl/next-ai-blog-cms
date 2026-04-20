@@ -126,7 +126,7 @@ export default function PublicLayout({
       {/* Footer */}
       <footer className="relative z-10 mt-12 border-t border-border py-5">
         <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} AI Blog. Built with Next.js + AI.
+          © {new Date().getFullYear()} 码界网. All rights reserved.
         </div>
       </footer>
 
