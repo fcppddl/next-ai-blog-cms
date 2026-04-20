@@ -54,7 +54,8 @@ export async function PUT(request: Request) {
       const conflict = await prisma.user.findFirst({
         where: { username: data.username, NOT: { id: session.user.id } },
       });
-      if (conflict) return NextResponse.json({ error: "用户名已被使用" }, { status: 400 });
+      if (conflict)
+        return NextResponse.json({ error: "用户名已被使用" }, { status: 400 });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +69,6 @@ export async function PUT(request: Request) {
       bio: data.bio || null,
       avatar: data.avatar || null,
       email: data.email || null,
-      phone: data.phone || null,
       wechat: data.wechat || null,
       qq: data.qq || null,
       website: data.website || null,
@@ -84,7 +84,10 @@ export async function PUT(request: Request) {
 
     const updated = await prisma.user.update({
       where: { id: session.user.id },
-      data: { ...userData, profile: { upsert: { create: profileData, update: profileData } } },
+      data: {
+        ...userData,
+        profile: { upsert: { create: profileData, update: profileData } },
+      },
       include: { profile: true },
     });
 
@@ -93,7 +96,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ message: "个人信息更新成功", user: safe });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "数据验证失败", details: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "数据验证失败", details: error.issues },
+        { status: 400 },
+      );
     }
     console.error("更新个人信息失败:", error);
     return NextResponse.json({ error: "服务器错误" }, { status: 500 });
