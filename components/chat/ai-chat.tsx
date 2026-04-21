@@ -37,6 +37,8 @@ interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
+  /** 该条之前的对话摘要（长期记忆锚点） */
+  summary?: string;
   isError?: boolean;
   sources?: MessageSource[];
   /** 本轮是否走了向量检索（服务端注入片段） */
@@ -65,7 +67,8 @@ interface SSEPayload {
 
 const STORAGE_KEY = "ai-chat-v1";
 const MAX_STORED = 20;
-const MAX_HISTORY = 10;
+/** 发往服务端的完整历史条数上限（摘要锚点需在此范围内） */
+const MAX_HISTORY_SEND = 80;
 const FLUSH_INTERVAL_MS = 30;
 const FLUSH_MIN_CHARS = 20;
 
@@ -254,6 +257,7 @@ export default function AIChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -263,6 +267,10 @@ export default function AIChatWidget() {
 
   /** 避免首帧 messages=[] 在从 localStorage 恢复前把存储覆盖成空 */
   const skipInitialPersist = useRef(true);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Persistence：挂载后从 localStorage 恢复（避免 SSR 与客户端首帧不一致）
   useEffect(() => {
@@ -393,9 +401,12 @@ export default function AIChatWidget() {
     if (!content || streaming) return;
 
     const mode: CompanionMode = postSlug ? "articles" : "free";
-    const history = messages
-      .slice(-MAX_HISTORY)
-      .map((m) => ({ role: m.role, content: m.content }));
+    const history = messagesRef.current.slice(-MAX_HISTORY_SEND).map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      summary: m.summary,
+    }));
     const articleContext = postSlug ? articleCtxRef.current : null;
 
     const userId = genId();
@@ -460,6 +471,63 @@ export default function AIChatWidget() {
             ragEnabled,
             ragUsed,
           }));
+
+          const withFinal = messagesRef.current.map((m) =>
+            m.id === asstId
+              ? {
+                  ...m,
+                  content: final || m.content,
+                  ragEnabled,
+                  ragUsed,
+                }
+              : m,
+          );
+          void (async () => {
+            try {
+              const cr = await fetch("/api/ai/companion/context/compress", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: withFinal }),
+                signal: ctrl.signal,
+              });
+              if (!cr.ok) return;
+              const data = (await cr.json()) as {
+                compressed?: boolean;
+                messages?: Array<{
+                  id?: string;
+                  role: MessageRole;
+                  content: string;
+                  summary?: string;
+                }>;
+              };
+              if (
+                data.compressed &&
+                Array.isArray(data.messages) &&
+                data.messages.length > 0
+              ) {
+                setMessages((prev) =>
+                  data.messages!.map((row) => {
+                    const old = row.id
+                      ? prev.find((p) => p.id === row.id)
+                      : undefined;
+                    return {
+                      ...(old ?? {
+                        id: row.id ?? genId(),
+                        role: row.role,
+                        content: row.content,
+                      }),
+                      id: row.id ?? old?.id ?? genId(),
+                      role: row.role,
+                      content: row.content,
+                      summary: row.summary,
+                    };
+                  }),
+                );
+              }
+            } catch {
+              /* 摘要失败不影响主对话 */
+            }
+          })();
         } else if (event === "error") {
           throw new Error(
             typeof payload?.message === "string"
