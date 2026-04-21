@@ -38,6 +38,7 @@
     "date-fns": "^4.1.0",
     "geist": "^1.7.0",
     "highlight.js": "^11.11.1",
+    "js-tiktoken": "^1.0.21",
     "lucide-react": "^1.7.0",
     "mermaid": "^11.13.0",
     "next": "16.2.1",

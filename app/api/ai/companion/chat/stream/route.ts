@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAIClient, type ChatMessage } from "@/lib/ai/client";
+import { ContextManager } from "@/lib/chat/context";
 import {
   ASSISTANT_RAG_META_MARKER,
   buildCompanionSystemPrompt,
@@ -12,16 +13,20 @@ import {
   type CompanionMode,
   type RetrievedChunk,
 } from "@/lib/ai/companion";
+import type { Message } from "@/types/chat";
 import {
   rerankWithQwen3Rerank,
   getRagVectorRecallLimit,
 } from "@/lib/ai/rerank";
 import { getVectorStore } from "@/lib/vector/store";
 
-interface CompanionHistoryMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+const MAX_CONTEXT_TOKENS = parseInt(
+  process.env.COMPANION_MAX_CONTEXT_TOKENS || "8192",
+  10,
+);
+const MAX_HISTORY_ITEMS = 120;
+const MAX_HISTORY_MESSAGE_LENGTH = 1200;
+const MAX_SUMMARY_LENGTH = 16000;
 
 interface CompanionArticleContext {
   slug: string;
@@ -33,8 +38,6 @@ interface CompanionArticleContext {
 }
 
 const MAX_USER_MESSAGE_LENGTH = 2000;
-const MAX_HISTORY_MESSAGES = 12;
-const MAX_HISTORY_MESSAGE_LENGTH = 1200;
 const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
 const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
 const RAG_TOP_K = parseInt(process.env.RAG_TOP_K || "3", 10);
@@ -48,10 +51,10 @@ function normalizeText(value: unknown, maxLength: number): string {
   return value.trim().slice(0, maxLength);
 }
 
-function normalizeHistory(value: unknown): CompanionHistoryMessage[] {
+function normalizeHistory(value: unknown): Message[] {
   if (!Array.isArray(value)) return [];
 
-  const normalized: CompanionHistoryMessage[] = [];
+  const normalized: Message[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const role = (item as { role?: unknown }).role;
@@ -61,9 +64,20 @@ function normalizeHistory(value: unknown): CompanionHistoryMessage[] {
       MAX_HISTORY_MESSAGE_LENGTH,
     );
     if (!content) continue;
-    normalized.push({ role, content });
+    const summaryRaw = (item as { summary?: unknown }).summary;
+    const summary =
+      typeof summaryRaw === "string"
+        ? summaryRaw.trim().slice(0, MAX_SUMMARY_LENGTH)
+        : undefined;
+    const id = (item as { id?: unknown }).id;
+    normalized.push({
+      role,
+      content,
+      ...(summary ? { summary } : {}),
+      ...(typeof id === "string" ? { id } : {}),
+    });
   }
-  return normalized.slice(-MAX_HISTORY_MESSAGES);
+  return normalized.slice(-MAX_HISTORY_ITEMS);
 }
 
 function normalizeArticleContext(
@@ -127,7 +141,7 @@ async function tryVectorSearch(
     const results = await vectorStore.search(embeddings[0], {
       limit: recallLimit,
     });
-    console.log("results", results);
+    // console.log("results", results);
 
     if (!results.length) return null;
 
@@ -159,7 +173,7 @@ async function tryVectorSearch(
       topN: RAG_TOP_K,
       signal,
     });
-    console.log("reranked", reranked);
+    // console.log("reranked", reranked);
 
     if (reranked && reranked.length > 0) {
       return reranked;
@@ -296,18 +310,20 @@ export async function POST(request: NextRequest) {
 如果用户问题与当前页面文章有关，请优先基于这篇文章回答。`;
         }
 
-        const messages: ChatMessage[] = [
-          { role: "system", content: systemPrompt },
-          ...history.map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
-          { role: "user", content: message },
-        ];
+        /** 上下文：主 systemPrompt（人设+RAG 等）→ 若有 summary 锚点则注入第二条 system（摘要）→ 仅「锚点之后」的 history + 本轮 user；再按 token 裁剪近期段。 */
+        const contextManager = new ContextManager({
+          maxTokens: MAX_CONTEXT_TOKENS,
+        });
+        const messages: ChatMessage[] = contextManager.prepareForRequest(
+          systemPrompt,
+          history,
+          message,
+        );
+        console.log("messages", messages);
 
         let streamedContent = "";
         let lastVisibleSentLen = 0;
-        console.log("systemPrompt", message, systemPrompt);
+        // console.log("systemPrompt", message, systemPrompt);
 
         const response = await aiClient.chatStream(
           messages,
