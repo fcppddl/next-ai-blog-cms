@@ -159,6 +159,15 @@ model PostVectorIndex {
   @@index([postId])
 }
 
+/// 站点级键值配置。业务键在 `lib/ai/companion-settings` 的 `AppSettingKeys` 等处约定，便于扩展（如对话压缩阈值等），无需加表
+model AppSetting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
 // ============================================================================
 // 图片管理系统
 // ============================================================================

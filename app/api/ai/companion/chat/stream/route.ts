@@ -19,6 +19,7 @@ import {
   getRagVectorRecallLimit,
 } from "@/lib/ai/rerank";
 import { getVectorStore } from "@/lib/vector/store";
+import { getResolvedCompanionSystemPersona } from "@/lib/ai/companion-settings";
 
 const MAX_CONTEXT_TOKENS = parseInt(
   process.env.COMPANION_MAX_CONTEXT_TOKENS || "8192",
@@ -268,11 +269,12 @@ export async function POST(request: NextRequest) {
 
         const aiClient = getAIClient();
 
-        // 并行：获取作者信息 + 文章元信息 + 尝试向量检索
-        const [articles, author, ragChunks] = await Promise.all([
+        // 并行：作者 / 文章元 / 向量检索 / 人设首段（DB 有则用，否则默认）
+        const [articles, author, ragChunks, systemPersona] = await Promise.all([
           getPublicArticleMeta(),
           getAuthorSummary(),
           tryVectorSearch(message, aiClient, request.signal),
+          getResolvedCompanionSystemPersona(),
         ]);
 
         const usingRAG = ragChunks !== null && ragChunks.length > 0;
@@ -285,10 +287,10 @@ export async function POST(request: NextRequest) {
           ragChunkCount: ragChunks?.length ?? 0,
         });
 
-        // 构建系统提示词：RAG 模式 or 降级元信息模式
+        // 系统提示：人设首段在 build* 内注入（见 companion.ts）
         let systemPrompt = usingRAG
-          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks })
-          : buildCompanionSystemPrompt({ mode, author, articles });
+          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks, systemPersona })
+          : buildCompanionSystemPrompt({ mode, author, articles, systemPersona });
 
         // 文章详情页：注入当前页面上下文（仍保留）
         if (articleContext) {

@@ -26,6 +26,10 @@ export interface AuthorSummary {
 
 const PROMPT_ARTICLE_LIMIT = 120;
 
+/** 默认 System Prompt 人设首段；与 `app_settings.companion_system_prompt` 未配置时的运行时回退、以及 seed 写入内容一致 */
+export const DEFAULT_COMPANION_SYSTEM_PERSONA =
+  "你是个人博客网站的智能助手。你的语气亲切、有边界、不过度夸张。";
+
 /** 助手回复末尾的机器可读标记，用于解析是否参考站内文章及引用列表 */
 export const ASSISTANT_RAG_META_MARKER = "__RAG_META__";
 
@@ -151,8 +155,10 @@ export function buildCompanionSystemPrompt(params: {
   mode: CompanionMode;
   author: AuthorSummary;
   articles: PublicArticleMeta[];
+  /** 系统提示最前部的人设/语气段，一般来自 `app_settings` 或 `DEFAULT_COMPANION_SYSTEM_PERSONA` */
+  systemPersona: string;
 }): string {
-  const { mode, author, articles } = params;
+  const { mode, author, articles, systemPersona } = params;
   const promptArticles = articles.slice(0, PROMPT_ARTICLE_LIMIT);
 
   const articleLines = promptArticles.map((article, index) => {
@@ -180,7 +186,7 @@ export function buildCompanionSystemPrompt(params: {
         ? `当前是"了解作者"模式：优先介绍作者经历、兴趣、技术背景。`
         : `当前是"自由聊天"模式：可以日常对话，但保持友好并尽量结合站点内容。`;
 
-  return `你是个人博客网站的智能助手。你的语气亲切、有边界、不过度夸张。
+  return `${systemPersona}
 
 ${modeInstruction}
 
@@ -296,8 +302,9 @@ export function buildRAGSystemPrompt(params: {
   mode: CompanionMode;
   author: AuthorSummary;
   chunks: RetrievedChunk[];
+  systemPersona: string;
 }): string {
-  const { mode, author, chunks } = params;
+  const { mode, author, chunks, systemPersona } = params;
 
   const modeInstruction =
     mode === "articles"
@@ -314,7 +321,7 @@ export function buildRAGSystemPrompt(params: {
     })
     .join("\n\n");
 
-  return `你是个人博客网站的智能助手。你的语气亲切、有边界、不过度夸张。
+  return `${systemPersona}
   
 ${COMPANION_RAG_META_REMINDER_OPEN}
 

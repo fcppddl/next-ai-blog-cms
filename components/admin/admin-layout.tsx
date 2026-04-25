@@ -14,6 +14,7 @@ import {
   User,
   Menu,
   Database,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       exact: false,
     },
     { name: "标签管理", href: "/admin/tags", icon: Tags, exact: false },
+    {
+      name: "对话设置",
+      href: "/admin/dialogue-settings",
+      icon: MessageCircle,
+      exact: true,
+    },
     { name: "向量索引", href: "/admin/settings", icon: Database, exact: false },
     { name: "个人信息", href: "/admin/profile", icon: User, exact: false },
   ];
