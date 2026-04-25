@@ -302,7 +302,9 @@ export async function POST(request: NextRequest) {
                 ? "HOME_QUICK_RECOMMEND"
                 : "HOME_QUICK_OTHER";
             }
-            return intent === "chit_chat" ? "HOME_TYPED_CHIT" : "HOME_TYPED_RAG";
+            return intent === "chit_chat"
+              ? "HOME_TYPED_CHIT"
+              : "HOME_TYPED_RAG";
           }
           if (isQuick) return "POST_QUICK";
           return intent === "chit_chat" ? "POST_TYPED_CHIT" : "POST_TYPED_RAG";
@@ -330,7 +332,8 @@ export async function POST(request: NextRequest) {
           scenario === "HOME_TYPED_CHIT" ||
           scenario === "POST_TYPED_CHIT";
         const needPublishedCatalog = scenario === "HOME_QUICK_RECOMMEND";
-        const needRag = scenario === "HOME_TYPED_RAG" || scenario === "POST_TYPED_RAG";
+        const needRag =
+          scenario === "HOME_TYPED_RAG" || scenario === "POST_TYPED_RAG";
 
         const [author, publishedArticles, systemPersona] = await Promise.all([
           needAuthor ? getAuthorSummary() : Promise.resolve(null),
@@ -350,11 +353,14 @@ export async function POST(request: NextRequest) {
           knowledgeRouteHint,
           llmIntent: intentFromLlm,
           author: author?.displayName ?? undefined,
-          publishedArticleCount: needPublishedCatalog ? publishedArticles.length : 0,
+          publishedArticleCount: needPublishedCatalog
+            ? publishedArticles.length
+            : 0,
           ragEnabled: usingRAG,
           ragChunkCount: ragChunks?.length ?? 0,
         });
 
+        console.log("scenario", scenario);
         let systemPrompt: string;
         if (scenario === "HOME_QUICK_RECOMMEND") {
           systemPrompt = buildPublishedArticleCatalogSystemPrompt({
@@ -387,13 +393,18 @@ export async function POST(request: NextRequest) {
           systemPrompt = buildChitChatSystemPrompt({
             author: author!,
             systemPersona,
+            articleTitle: articleContext?.title ?? "未知",
+            articleSlug: articleContext?.slug ?? "",
+            articleBody: articleContext?.content ?? "",
           });
-          systemPrompt += `\n\n【当前文章正文】\n${articleContext?.content || "（正文为空）"}`;
         } else {
           // POST_TYPED_RAG
           systemPrompt = buildRAGOnlySystemPrompt({
             chunks: ragChunks ?? [],
             systemPersona,
+            articleTitle: articleContext?.title ?? "未知",
+            articleSlug: articleContext?.slug ?? "",
+            articleBody: articleContext?.content ?? "",
           });
         }
 

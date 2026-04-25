@@ -190,43 +190,28 @@ function useArticleContext(
 
     fetch(`/api/posts/${encodeURIComponent(slug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (
-          data: {
-            post?: {
-              slug?: unknown;
-              title?: unknown;
-              excerpt?: unknown;
-              content?: unknown;
-              category?: { name?: unknown } | null;
-              tags?: Array<{ name?: unknown }>;
-            };
-          } | null,
-        ) => {
-          if (!alive || !data?.post) return;
-          const p = data.post;
-          if (typeof p.slug !== "string") return;
-          setCtx({
-            slug: p.slug,
-            title:
-              typeof p.title === "string" && p.title.trim()
-                ? p.title.trim()
-                : slug,
-            excerpt:
-              typeof p.excerpt === "string" ? p.excerpt.slice(0, 300) : "",
-            content:
-              typeof p.content === "string" ? p.content.slice(0, 2600) : "",
-            category:
-              typeof p.category?.name === "string" ? p.category.name : "",
-            tags: Array.isArray(p.tags)
-              ? p.tags
-                  .map((t) => (typeof t?.name === "string" ? t.name : ""))
-                  .filter(Boolean)
-                  .slice(0, 6)
-              : [],
-          });
-        },
-      )
+      .then((data: unknown) => {
+        if (!alive || !data) return;
+
+        type PostResponse = {
+          slug: string;
+          title: string;
+          excerpt: string | null;
+          content: string | null;
+          category: { name: string } | null;
+          tags: Array<{ tag: { name: string } }>;
+        };
+
+        const p = data as PostResponse;
+        setCtx({
+          slug: p.slug,
+          title: p.title.trim() || slug,
+          excerpt: (p.excerpt || "").trim(),
+          content: (p.content || "").trim(),
+          category: p.category?.name || "",
+          tags: p.tags.map((t) => t.tag.name).filter(Boolean),
+        });
+      })
       .catch(() => {
         if (alive) setCtx(null);
       });
