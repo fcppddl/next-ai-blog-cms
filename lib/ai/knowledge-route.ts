@@ -6,9 +6,7 @@ export type CompanionKnowledgeIntent = "chit_chat" | "article_qa";
 export const DEFAULT_COMPANION_KNOWLEDGE_INTENT: CompanionKnowledgeIntent =
   "article_qa";
 
-function tryParseIntentJson(
-  text: string,
-): CompanionKnowledgeIntent | null {
+function tryParseIntentJson(text: string): CompanionKnowledgeIntent | null {
   const trimmed = text.trim();
   const oneLine =
     trimmed.split("\n").find((l) => l.includes("{") && l.includes("}")) ??
@@ -59,6 +57,9 @@ export async function classifyCompanionKnowledgeIntent(
       temperature: 0,
       maxTokens: 80,
       signal,
+      response_format: {
+        type: "json_object",
+      },
     });
     const intent = tryParseIntentJson(res.content);
     if (intent) return intent;

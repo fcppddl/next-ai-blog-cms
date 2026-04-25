@@ -138,6 +138,7 @@ export interface ChatOptions {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  response_format?: OpenAI.ChatCompletionCreateParamsNonStreaming["response_format"];
 }
 
 export interface ChatResponse {
@@ -267,6 +268,7 @@ class ChatClient implements AIClient {
     options: ChatOptions = {},
   ): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
+      ...options,
       model: options.model || process.env.CHAT_MODEL || "",
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? 0.7,
