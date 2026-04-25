@@ -3,22 +3,29 @@ import { getAIClient, type ChatMessage } from "@/lib/ai/client";
 import { ContextManager } from "@/lib/chat/context";
 import {
   ASSISTANT_RAG_META_MARKER,
-  buildCompanionSystemPrompt,
-  buildRAGSystemPrompt,
+  buildCurrentArticleBodyOnlySystemPrompt,
+  buildChitChatSystemPrompt,
+  buildPublishedArticleCatalogSystemPrompt,
+  buildRAGOnlySystemPrompt,
   getAuthorSummary,
   getPublicArticleMeta,
   parseAssistantRagMeta,
   visibleFinalPrefixLen,
   visibleStreamingPrefixLen,
-  type CompanionMode,
   type RetrievedChunk,
 } from "@/lib/ai/companion";
+import { classifyCompanionKnowledgeIntent } from "@/lib/ai/knowledge-route";
+import {
+  isKnowledgeRouteHint,
+  type KnowledgeRouteHint,
+} from "@/lib/ai/knowledge-route-hint";
 import type { Message } from "@/types/chat";
 import {
   rerankWithQwen3Rerank,
   getRagVectorRecallLimit,
 } from "@/lib/ai/rerank";
 import { getVectorStore } from "@/lib/vector/store";
+import { getResolvedCompanionSystemPersona } from "@/lib/ai/companion-settings";
 
 const MAX_CONTEXT_TOKENS = parseInt(
   process.env.COMPANION_MAX_CONTEXT_TOKENS || "8192",
@@ -41,10 +48,6 @@ const MAX_USER_MESSAGE_LENGTH = 2000;
 const STREAM_CHUNK_FLUSH_INTERVAL_MS = 45;
 const STREAM_CHUNK_FLUSH_MIN_CHARS = 48;
 const RAG_TOP_K = parseInt(process.env.RAG_TOP_K || "3", 10);
-
-function isCompanionMode(value: unknown): value is CompanionMode {
-  return value === "articles" || value === "author" || value === "free";
-}
 
 function normalizeText(value: unknown, maxLength: number): string {
   if (typeof value !== "string") return "";
@@ -197,7 +200,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
   }
 
-  const mode = (body as { mode?: unknown })?.mode;
   const message = normalizeText(
     (body as { message?: unknown })?.message,
     MAX_USER_MESSAGE_LENGTH,
@@ -206,13 +208,20 @@ export async function POST(request: NextRequest) {
   const articleContext = normalizeArticleContext(
     (body as { articleContext?: unknown })?.articleContext,
   );
+  const knowledgeFromQuick =
+    (body as { knowledgeFromQuick?: unknown })?.knowledgeFromQuick === true;
 
-  if (!isCompanionMode(mode)) {
-    return NextResponse.json(
-      { error: "mode 必须是 articles / author / free" },
-      { status: 400 },
-    );
+  const rawRouteHint = (body as { knowledgeRouteHint?: unknown })
+    .knowledgeRouteHint;
+  let knowledgeRouteHint: KnowledgeRouteHint = isKnowledgeRouteHint(
+    rawRouteHint,
+  )
+    ? rawRouteHint
+    : "auto";
+  if (knowledgeRouteHint === "current_page" && !articleContext) {
+    knowledgeRouteHint = "auto";
   }
+
   if (!message) {
     return NextResponse.json({ error: "message 不能为空" }, { status: 400 });
   }
@@ -264,50 +273,139 @@ export async function POST(request: NextRequest) {
       request.signal.addEventListener("abort", handleAbort);
 
       try {
-        sendEvent("start", { mode, startedAt: new Date().toISOString() });
+        sendEvent("start", { startedAt: new Date().toISOString() });
 
         const aiClient = getAIClient();
 
-        // 并行：获取作者信息 + 文章元信息 + 尝试向量检索
-        const [articles, author, ragChunks] = await Promise.all([
-          getPublicArticleMeta(),
-          getAuthorSummary(),
-          tryVectorSearch(message, aiClient, request.signal),
+        const onArticlePage = Boolean(articleContext);
+        const isQuick = knowledgeFromQuick === true;
+
+        type Scenario =
+          | "HOME_QUICK_RECOMMEND"
+          | "HOME_QUICK_OTHER"
+          | "HOME_TYPED_CHIT"
+          | "HOME_TYPED_RAG"
+          | "POST_QUICK"
+          | "POST_TYPED_CHIT"
+          | "POST_TYPED_RAG";
+
+        function resolveScenario(input: {
+          onArticlePage: boolean;
+          isQuick: boolean;
+          knowledgeRouteHint: KnowledgeRouteHint;
+          intent: "chit_chat" | "article_qa" | null;
+        }): Scenario {
+          const { onArticlePage, isQuick, knowledgeRouteHint, intent } = input;
+          if (!onArticlePage) {
+            if (isQuick) {
+              return knowledgeRouteHint === "site_articles"
+                ? "HOME_QUICK_RECOMMEND"
+                : "HOME_QUICK_OTHER";
+            }
+            return intent === "chit_chat"
+              ? "HOME_TYPED_CHIT"
+              : "HOME_TYPED_RAG";
+          }
+          if (isQuick) return "POST_QUICK";
+          return intent === "chit_chat" ? "POST_TYPED_CHIT" : "POST_TYPED_RAG";
+        }
+
+        // 只有「非快捷」才进行知识路由
+        let intentFromLlm: "chit_chat" | "article_qa" | null = null;
+        if (!isQuick) {
+          intentFromLlm = await classifyCompanionKnowledgeIntent(
+            message,
+            aiClient,
+            { signal: request.signal },
+          );
+        }
+
+        const scenario = resolveScenario({
+          onArticlePage,
+          isQuick,
+          knowledgeRouteHint,
+          intent: intentFromLlm,
+        });
+
+        const needAuthor =
+          scenario === "HOME_QUICK_OTHER" ||
+          scenario === "HOME_TYPED_CHIT" ||
+          scenario === "POST_TYPED_CHIT";
+        const needPublishedCatalog = scenario === "HOME_QUICK_RECOMMEND";
+        const needRag =
+          scenario === "HOME_TYPED_RAG" || scenario === "POST_TYPED_RAG";
+
+        const [author, publishedArticles, systemPersona] = await Promise.all([
+          needAuthor ? getAuthorSummary() : Promise.resolve(null),
+          needPublishedCatalog ? getPublicArticleMeta() : Promise.resolve([]),
+          getResolvedCompanionSystemPersona(),
         ]);
 
-        const usingRAG = ragChunks !== null && ragChunks.length > 0;
+        const ragChunks = needRag
+          ? await tryVectorSearch(message, aiClient, request.signal)
+          : null;
+        const usingRAG = needRag && ragChunks !== null && ragChunks.length > 0;
 
         sendEvent("context", {
-          articleCount: articles.length,
-          author: author.displayName,
-          hasArticleContext: Boolean(articleContext),
+          scenario,
+          onArticlePage,
+          knowledgeFromQuick,
+          knowledgeRouteHint,
+          llmIntent: intentFromLlm,
+          author: author?.displayName ?? undefined,
+          publishedArticleCount: needPublishedCatalog
+            ? publishedArticles.length
+            : 0,
           ragEnabled: usingRAG,
           ragChunkCount: ragChunks?.length ?? 0,
         });
 
-        // 构建系统提示词：RAG 模式 or 降级元信息模式
-        let systemPrompt = usingRAG
-          ? buildRAGSystemPrompt({ mode, author, chunks: ragChunks })
-          : buildCompanionSystemPrompt({ mode, author, articles });
-
-        // 文章详情页：注入当前页面上下文（仍保留）
-        if (articleContext) {
-          const tagText =
-            articleContext.tags.length > 0
-              ? articleContext.tags.join("、")
-              : "无";
-          systemPrompt += `
-
-【当前页面文章（优先参考）】
-- 标题：${articleContext.title}
-- slug：${articleContext.slug}
-- 分类：${articleContext.category || "未分类"}
-- 标签：${tagText}
-- 摘要：${articleContext.excerpt || "无"}
-- 正文节选：${articleContext.content || "无"}
-
-【当前页面回答约束】
-如果用户问题与当前页面文章有关，请优先基于这篇文章回答。`;
+        console.log("scenario", scenario);
+        let systemPrompt: string;
+        if (scenario === "HOME_QUICK_RECOMMEND") {
+          systemPrompt = buildPublishedArticleCatalogSystemPrompt({
+            articles: publishedArticles,
+            systemPersona,
+          });
+        } else if (scenario === "HOME_QUICK_OTHER") {
+          systemPrompt = buildChitChatSystemPrompt({
+            author: author!,
+            systemPersona,
+          });
+        } else if (scenario === "HOME_TYPED_CHIT") {
+          systemPrompt = buildChitChatSystemPrompt({
+            author: author!,
+            systemPersona,
+          });
+        } else if (scenario === "HOME_TYPED_RAG") {
+          systemPrompt = buildRAGOnlySystemPrompt({
+            chunks: ragChunks ?? [],
+            systemPersona,
+          });
+        } else if (scenario === "POST_QUICK") {
+          systemPrompt = buildCurrentArticleBodyOnlySystemPrompt({
+            systemPersona,
+            articleTitle: articleContext?.title ?? "未知",
+            articleSlug: articleContext?.slug ?? "",
+            articleBody: articleContext?.content ?? "",
+          });
+        } else if (scenario === "POST_TYPED_CHIT") {
+          systemPrompt = buildChitChatSystemPrompt({
+            author: author!,
+            systemPersona,
+            articleTitle: articleContext?.title ?? "未知",
+            articleSlug: articleContext?.slug ?? "",
+            articleBody: articleContext?.content ?? "",
+          });
+        } else {
+          // POST_TYPED_RAG
+          systemPrompt = buildRAGOnlySystemPrompt({
+            chunks: ragChunks ?? [],
+            systemPersona,
+            articleTitle: articleContext?.title ?? "未知",
+            articleSlug: articleContext?.slug ?? "",
+            articleBody: articleContext?.content ?? "",
+          });
         }
 
         /** 上下文：主 systemPrompt（人设+RAG 等）→ 若有 summary 锚点则注入第二条 system（摘要）→ 仅「锚点之后」的 history + 本轮 user；再按 token 裁剪近期段。 */
@@ -328,7 +426,7 @@ export async function POST(request: NextRequest) {
         const response = await aiClient.chatStream(
           messages,
           {
-            temperature: mode === "free" ? 0.8 : 0.6,
+            temperature: 0.7,
             maxTokens: 1100,
             signal: request.signal,
           },

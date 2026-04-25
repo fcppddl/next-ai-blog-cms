@@ -124,7 +124,7 @@ export default function PublicLayout({
       <main className="relative z-10 flex-1 pt-16">{children}</main>
 
       {/* Footer */}
-      <footer className="relative z-10 mt-12 border-t border-border py-5">
+      <footer className="relative z-10 border-t border-border py-5">
         <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} 码界网. 版权所有。
         </div>

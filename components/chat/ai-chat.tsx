@@ -22,10 +22,10 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { KnowledgeRouteHint } from "@/lib/ai/knowledge-route-hint";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type CompanionMode = "articles" | "free";
 type MessageRole = "user" | "assistant";
 
 interface MessageSource {
@@ -190,43 +190,28 @@ function useArticleContext(
 
     fetch(`/api/posts/${encodeURIComponent(slug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (
-          data: {
-            post?: {
-              slug?: unknown;
-              title?: unknown;
-              excerpt?: unknown;
-              content?: unknown;
-              category?: { name?: unknown } | null;
-              tags?: Array<{ name?: unknown }>;
-            };
-          } | null,
-        ) => {
-          if (!alive || !data?.post) return;
-          const p = data.post;
-          if (typeof p.slug !== "string") return;
-          setCtx({
-            slug: p.slug,
-            title:
-              typeof p.title === "string" && p.title.trim()
-                ? p.title.trim()
-                : slug,
-            excerpt:
-              typeof p.excerpt === "string" ? p.excerpt.slice(0, 300) : "",
-            content:
-              typeof p.content === "string" ? p.content.slice(0, 2600) : "",
-            category:
-              typeof p.category?.name === "string" ? p.category.name : "",
-            tags: Array.isArray(p.tags)
-              ? p.tags
-                  .map((t) => (typeof t?.name === "string" ? t.name : ""))
-                  .filter(Boolean)
-                  .slice(0, 6)
-              : [],
-          });
-        },
-      )
+      .then((data: unknown) => {
+        if (!alive || !data) return;
+
+        type PostResponse = {
+          slug: string;
+          title: string;
+          excerpt: string | null;
+          content: string | null;
+          category: { name: string } | null;
+          tags: Array<{ tag: { name: string } }>;
+        };
+
+        const p = data as PostResponse;
+        setCtx({
+          slug: p.slug,
+          title: p.title.trim() || slug,
+          excerpt: (p.excerpt || "").trim(),
+          content: (p.content || "").trim(),
+          category: p.category?.name || "",
+          tags: p.tags.map((t) => t.tag.name).filter(Boolean),
+        });
+      })
       .catch(() => {
         if (alive) setCtx(null);
       });
@@ -396,11 +381,16 @@ export default function AIChatWidget() {
     setMessages([]);
   };
 
-  const send = async (text?: string) => {
+  const send = async (
+    text?: string,
+    opts?: {
+      knowledgeRouteHint?: KnowledgeRouteHint;
+      knowledgeFromQuick?: boolean;
+    },
+  ) => {
     const content = (text ?? input).trim();
     if (!content || streaming) return;
 
-    const mode: CompanionMode = postSlug ? "articles" : "free";
     const history = messagesRef.current.slice(-MAX_HISTORY_SEND).map((m) => ({
       id: m.id,
       role: m.role,
@@ -430,10 +420,11 @@ export default function AIChatWidget() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode,
           message: content,
           history,
           articleContext,
+          knowledgeRouteHint: opts?.knowledgeRouteHint ?? "auto",
+          knowledgeFromQuick: opts?.knowledgeFromQuick === true,
         }),
         signal: ctrl.signal,
       });
@@ -562,32 +553,45 @@ export default function AIChatWidget() {
 
   if (!isPublic) return null;
 
-  const quickPrompts =
+  const quickPrompts: Array<{
+    label: string;
+    prompt: string;
+    knowledgeRouteHint: KnowledgeRouteHint;
+  }> =
     postSlug && articleCtx
       ? [
           {
             label: "总结文章",
             prompt: `请总结《${articleCtx.title}》的核心内容，控制在 3 点以内。`,
+            knowledgeRouteHint: "current_page",
           },
           {
             label: "提炼观点",
             prompt: `请提炼《${articleCtx.title}》最关键的 3 个观点。`,
+            knowledgeRouteHint: "current_page",
           },
           {
             label: "行动建议",
             prompt: `基于《${articleCtx.title}》，给我 3 条可以马上执行的实践建议。`,
+            knowledgeRouteHint: "current_page",
           },
         ]
       : [
           {
             label: "推荐文章",
             prompt: "推荐 3 篇适合先看的文章，并说下推荐理由。",
+            knowledgeRouteHint: "site_articles",
           },
           {
             label: "了解作者",
             prompt: "简单介绍一下作者的技术背景和擅长方向。",
+            knowledgeRouteHint: "chit",
           },
-          { label: "随便聊聊", prompt: "你好，先用一句话介绍你自己。" },
+          {
+            label: "随便聊聊",
+            prompt: "你好，先用一句话介绍你自己。",
+            knowledgeRouteHint: "chit",
+          },
         ];
 
   return (
@@ -651,7 +655,12 @@ export default function AIChatWidget() {
                     <button
                       key={q.label}
                       type="button"
-                      onClick={() => void send(q.prompt)}
+                      onClick={() =>
+                        void send(q.prompt, {
+                          knowledgeRouteHint: q.knowledgeRouteHint,
+                          knowledgeFromQuick: true,
+                        })
+                      }
                       disabled={streaming}
                       className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >

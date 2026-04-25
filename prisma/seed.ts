@@ -1,10 +1,22 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEFAULT_COMPANION_SYSTEM_PERSONA } from "../lib/ai/companion";
+import { AppSettingKeys } from "../lib/ai/companion-settings";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 开始数据库种子...");
+
+  await prisma.appSetting.upsert({
+    where: { key: AppSettingKeys.systemPrompt },
+    update: {},
+    create: {
+      key: AppSettingKeys.systemPrompt,
+      value: DEFAULT_COMPANION_SYSTEM_PERSONA,
+    },
+  });
+  console.log("✅ 对话默认 System Prompt 已写入 app_settings");
 
   // 创建默认管理员用户
   const adminPassword = await bcrypt.hash(
