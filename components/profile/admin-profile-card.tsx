@@ -113,7 +113,7 @@ export default function AdminProfileCard() {
             {categories.length > 0 && (
               <div className="mb-4 border-b border-[#E0E0E0] pb-4 dark:border-border">
                 <div className="mb-2 flex items-center gap-1.5">
-                  <Layers className="h-3 w-3 text-muted-foreground" />
+                  <Layers className="h-3 w-3 text-indigo-600/80 dark:text-indigo-300/80" />
                   <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     文章分类
                   </span>
@@ -127,13 +127,13 @@ export default function AdminProfileCard() {
                     >
                       <span className="flex min-w-0 flex-1 items-center gap-2">
                         <span
-                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-base leading-none"
+                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-base leading-none text-indigo-600/80 transition-colors group-hover:text-indigo-700 dark:text-indigo-300/80 dark:group-hover:text-indigo-200"
                           aria-hidden
                         >
                           {cat.icon?.trim() ? (
                             cat.icon.trim()
                           ) : (
-                            <Folder className="h-3.5 w-3.5 opacity-70" />
+                            <Folder className="h-3.5 w-3.5" />
                           )}
                         </span>
                         <span className="truncate">{cat.name}</span>
@@ -149,7 +149,10 @@ export default function AdminProfileCard() {
 
             <div>
               <div className="mb-2 flex items-center gap-1.5">
-                <User className="h-3 w-3 text-muted-foreground" aria-hidden />
+                <User
+                  className="h-3 w-3 text-violet-600/80 dark:text-violet-300/80"
+                  aria-hidden
+                />
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   个人信息
                 </span>

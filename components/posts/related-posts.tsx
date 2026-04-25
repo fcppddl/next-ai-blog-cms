@@ -51,7 +51,7 @@ export default function RelatedPosts({ categorySlug, currentSlug }: RelatedPosts
               {post.title}
             </p>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
+              <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
               {new Date(post.createdAt).toLocaleDateString("zh-CN")}
             </span>
           </Link>

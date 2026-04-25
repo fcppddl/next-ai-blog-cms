@@ -19,7 +19,7 @@ interface Post {
   readingTime: number | null;
   views: number;
   createdAt: string;
-  category: { name: string; slug: string } | null;
+  category: { name: string; slug: string; icon: string | null } | null;
   tags: PostTag[];
 }
 
@@ -136,16 +136,16 @@ export default function PostList({ category, tag }: PostListProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 text-xs text-[#8C8C8C] dark:text-muted-foreground">
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 shrink-0" />
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-sky-600/80 dark:text-sky-400/80" />
                         {new Date(post.createdAt).toLocaleDateString("zh-CN")}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5 shrink-0" />
+                        <Eye className="h-3.5 w-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80" />
                         {post.views}
                       </span>
                       {post.readingTime ? (
                         <span className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-amber-600/80 dark:text-amber-400/80" />
                           {post.readingTime} 分钟
                         </span>
                       ) : null}
@@ -154,8 +154,12 @@ export default function PostList({ category, tag }: PostListProps) {
                     {(post.category || post.tags.length > 0) && (
                       <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
                         {post.category && (
-                          <span className="rounded-md bg-[#F5F5F5] px-2 py-1 text-xs text-[#595959] dark:bg-muted dark:text-muted-foreground">
-                            {post.category.name}
+                          <span
+                            className="inline-flex h-7 min-w-7 items-center justify-center rounded-md text-sm leading-none text-[#595959] dark:text-muted-foreground"
+                            title={post.category.name}
+                            aria-label={post.category.name}
+                          >
+                            {post.category.icon ?? "🏷️"}
                           </span>
                         )}
                         {post.tags.slice(0, 5).map(({ tag: t }) => (

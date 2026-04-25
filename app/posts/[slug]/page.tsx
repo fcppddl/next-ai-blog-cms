@@ -56,7 +56,7 @@ export default async function PostPage({ params }: PageProps) {
             href="/"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-sky-600/80 dark:text-sky-400/80" />
             返回首页
           </Link>
           <PostFullscreenToggle />
@@ -92,16 +92,16 @@ export default async function PostPage({ params }: PageProps) {
 
           <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-4 w-4 text-sky-600/80 dark:text-sky-400/80" />
               {new Date(post.createdAt).toLocaleDateString("zh-CN")}
             </span>
             <span className="flex items-center gap-1.5">
-              <Eye className="h-4 w-4" />
+              <Eye className="h-4 w-4 text-emerald-600/80 dark:text-emerald-400/80" />
               {post.views} 次阅读
             </span>
             {post.readingTime && (
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-4 w-4 text-amber-600/80 dark:text-amber-400/80" />
                 {post.readingTime} 分钟阅读
               </span>
             )}

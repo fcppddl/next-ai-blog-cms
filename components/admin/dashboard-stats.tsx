@@ -306,7 +306,7 @@ export default async function DashboardStats() {
                     </p>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center space-x-1 text-xs text-muted-foreground">
-                    <Eye className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5 text-emerald-600/80 dark:text-emerald-400/80" />
                     <span>{post.views}</span>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default async function DashboardStats() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center space-x-1 text-xs text-muted-foreground">
-                    <Eye className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5 text-emerald-600/80 dark:text-emerald-400/80" />
                     <span>{post.views.toLocaleString()}</span>
                   </div>
                 </div>

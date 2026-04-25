@@ -177,7 +177,7 @@ export default function PostsPage() {
                     <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">{post.views}</td>
                     <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                        <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
                         {new Date(post.updatedAt).toLocaleDateString("zh-CN")}
                       </div>
                     </td>

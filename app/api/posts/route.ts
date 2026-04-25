@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         readingTime: true,
         views: true,
         createdAt: true,
-        category: { select: { name: true, slug: true } },
+        category: { select: { name: true, slug: true, icon: true } },
         tags: { select: { tag: { select: { name: true, slug: true } } } },
       },
     }),

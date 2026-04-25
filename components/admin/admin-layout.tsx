@@ -118,12 +118,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <Link href="/">
-              <Button variant="ghost" size="icon" title="查看前台">
-                <Home className="h-5 w-5" />
+              <Button
+                variant="ghost"
+                size="icon"
+                title="查看前台"
+              >
+                <Home className="h-5 w-5 text-teal-600 dark:text-teal-300" />
               </Button>
             </Link>
+            <ThemeToggle />
             {session?.user && (
               <div className="group relative">
                 {avatarUrl ? (

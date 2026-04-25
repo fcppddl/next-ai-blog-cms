@@ -79,9 +79,15 @@ export function PostFullscreenToggle() {
       aria-label={isFullscreen ? "退出全屏" : "全屏阅读"}
     >
       {isFullscreen ? (
-        <Minimize2 className="h-4 w-4 text-foreground" strokeWidth={2} />
+        <Minimize2
+          className="h-4 w-4 text-rose-600/80 dark:text-rose-400/80"
+          strokeWidth={2}
+        />
       ) : (
-        <Maximize2 className="h-4 w-4 text-foreground" strokeWidth={2} />
+        <Maximize2
+          className="h-4 w-4 text-violet-600/80 dark:text-violet-400/80"
+          strokeWidth={2}
+        />
       )}
     </button>
   );
