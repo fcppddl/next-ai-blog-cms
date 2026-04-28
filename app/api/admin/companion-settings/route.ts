@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_COMPANION_SYSTEM_PERSONA } from "@/lib/ai/companion";
+import {
+  DEFAULT_COMPANION_SYSTEM_PERSONA,
+  DEFAULT_RAG_RERANK_SCORE_THRESHOLD,
+} from "@/lib/ai/companion";
 import {
   AppSettingKeys,
   normalizeStoredSystemPersona,
 } from "@/lib/ai/companion-settings";
 import type { Session } from "next-auth";
+
+function normalizeStoredScoreThreshold(input: string): number | null {
+  const raw = input.trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (n < 0 || n > 1) return null;
+  return n;
+}
 
 function unauthorized() {
   return NextResponse.json({ error: "未授权" }, { status: 401 });
@@ -48,14 +60,31 @@ export async function GET() {
     return unauthorized();
   }
 
-  const row = await prisma.appSetting.findUnique({
-    where: { key: AppSettingKeys.systemPrompt },
-    select: { value: true, updatedAt: true },
-  });
-  const stored = row?.value;
+  const [systemPromptRow, thresholdRow] = await Promise.all([
+    prisma.appSetting.findUnique({
+      where: { key: AppSettingKeys.systemPrompt },
+      select: { value: true, updatedAt: true },
+    }),
+    prisma.appSetting.findUnique({
+      where: { key: AppSettingKeys.ragRerankScoreThreshold },
+      select: { value: true, updatedAt: true },
+    }),
+  ]);
+
+  const storedPrompt = systemPromptRow?.value;
+  const storedThreshold = thresholdRow?.value;
+  const thresholdParsed = normalizeStoredScoreThreshold(storedThreshold ?? "");
   return NextResponse.json({
-    systemPrompt: stored && stored.trim() ? stored : DEFAULT_COMPANION_SYSTEM_PERSONA,
-    updatedAt: row?.updatedAt?.toISOString() ?? null,
+    systemPrompt:
+      storedPrompt && storedPrompt.trim()
+        ? storedPrompt
+        : DEFAULT_COMPANION_SYSTEM_PERSONA,
+    ragRerankScoreThreshold:
+      thresholdParsed === null
+        ? DEFAULT_RAG_RERANK_SCORE_THRESHOLD
+        : thresholdParsed,
+    updatedAt: systemPromptRow?.updatedAt?.toISOString() ?? null,
+    thresholdUpdatedAt: thresholdRow?.updatedAt?.toISOString() ?? null,
   });
 }
 
@@ -73,26 +102,75 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
   }
 
-  const raw = (body as { systemPrompt?: unknown })?.systemPrompt;
-  if (typeof raw !== "string") {
+  const systemPromptRaw = (body as { systemPrompt?: unknown })?.systemPrompt;
+  const thresholdRaw = (body as { ragRerankScoreThreshold?: unknown })
+    ?.ragRerankScoreThreshold;
+
+  const shouldUpdatePrompt = typeof systemPromptRaw === "string";
+  const shouldUpdateThreshold =
+    typeof thresholdRaw === "number" || typeof thresholdRaw === "string";
+
+  if (!shouldUpdatePrompt && !shouldUpdateThreshold) {
     return NextResponse.json(
-      { error: "systemPrompt 必须是字符串" },
+      { error: "至少需要提供 systemPrompt 或 ragRerankScoreThreshold" },
       { status: 400 },
     );
   }
 
-  const systemPrompt = normalizeStoredSystemPersona(raw);
+  const updates: Array<Promise<{ updatedAt: Date }>> = [];
+  let systemPrompt: string | undefined;
+  let ragRerankScoreThreshold: number | undefined;
 
-  const row = await prisma.appSetting.upsert({
-    where: { key: AppSettingKeys.systemPrompt },
-    create: { key: AppSettingKeys.systemPrompt, value: systemPrompt },
-    update: { value: systemPrompt },
-    select: { updatedAt: true },
-  });
+  if (shouldUpdatePrompt) {
+    systemPrompt = normalizeStoredSystemPersona(systemPromptRaw);
+    updates.push(
+      prisma.appSetting.upsert({
+        where: { key: AppSettingKeys.systemPrompt },
+        create: { key: AppSettingKeys.systemPrompt, value: systemPrompt },
+        update: { value: systemPrompt },
+        select: { updatedAt: true },
+      }),
+    );
+  }
+
+  if (shouldUpdateThreshold) {
+    const parsed =
+      typeof thresholdRaw === "number"
+        ? thresholdRaw
+        : normalizeStoredScoreThreshold(String(thresholdRaw));
+    if (
+      parsed === null ||
+      !Number.isFinite(parsed) ||
+      parsed < 0 ||
+      parsed > 1
+    ) {
+      return NextResponse.json(
+        { error: "ragRerankScoreThreshold 必须是 0~1 的数字" },
+        { status: 400 },
+      );
+    }
+    ragRerankScoreThreshold = parsed;
+    updates.push(
+      prisma.appSetting.upsert({
+        where: { key: AppSettingKeys.ragRerankScoreThreshold },
+        create: {
+          key: AppSettingKeys.ragRerankScoreThreshold,
+          value: String(parsed),
+        },
+        update: { value: String(parsed) },
+        select: { updatedAt: true },
+      }),
+    );
+  }
+
+  const [row1, row2] = await Promise.all(updates);
+  const updatedAt =
+    (row2 ?? row1)?.updatedAt?.toISOString?.() ?? new Date().toISOString();
 
   return NextResponse.json({
     ok: true,
     systemPrompt,
-    updatedAt: row.updatedAt.toISOString(),
+    ragRerankScoreThreshold,
+    updatedAt,
   });
 }

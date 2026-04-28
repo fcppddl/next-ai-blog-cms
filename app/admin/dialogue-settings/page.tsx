@@ -3,15 +3,23 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/admin-layout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleLoading } from "@/components/ui/loading";
 import { useToast } from "@/hooks/use-toast";
 import { Save } from "lucide-react";
+import { DEFAULT_RAG_RERANK_SCORE_THRESHOLD } from "@/lib/ai/companion";
 
 export default function DialogueSettingsPage() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [ragRerankScoreThreshold, setRagRerankScoreThreshold] = useState(
+    String(DEFAULT_RAG_RERANK_SCORE_THRESHOLD),
+  );
+  const [thresholdUpdatedAt, setThresholdUpdatedAt] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -28,6 +36,8 @@ export default function DialogueSettingsPage() {
         const payload = (await res.json().catch(() => ({}))) as {
           systemPrompt?: string;
           updatedAt?: string | null;
+          ragRerankScoreThreshold?: number;
+          thresholdUpdatedAt?: string | null;
           error?: string;
         };
         if (!res.ok) {
@@ -40,6 +50,12 @@ export default function DialogueSettingsPage() {
         }
         setSystemPrompt(payload.systemPrompt ?? "");
         setUpdatedAt(payload.updatedAt ?? null);
+        setRagRerankScoreThreshold(
+          Number.isFinite(payload.ragRerankScoreThreshold)
+            ? String(payload.ragRerankScoreThreshold)
+            : String(DEFAULT_RAG_RERANK_SCORE_THRESHOLD),
+        );
+        setThresholdUpdatedAt(payload.thresholdUpdatedAt ?? null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,11 +69,23 @@ export default function DialogueSettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const n = Number(ragRerankScoreThreshold);
+      if (!Number.isFinite(n) || n < 0 || n > 1) {
+        toast({
+          title: "阈值不合法",
+          description: "请输入 0~1 的数字（例如 0.6）",
+          variant: "destructive",
+        });
+        return;
+      }
       const res = await fetch("/api/admin/companion-settings", {
         method: "PUT",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ systemPrompt }),
+        body: JSON.stringify({
+          systemPrompt,
+          ragRerankScoreThreshold: n,
+        }),
       });
       const data = (await res.json()) as {
         error?: string;
@@ -67,7 +95,7 @@ export default function DialogueSettingsPage() {
         if (data.updatedAt) setUpdatedAt(data.updatedAt);
         toast({
           title: "已保存",
-          description: "前台对话将使用新的 System Prompt",
+          description: "对话设置已更新并立即生效",
         });
       } else {
         toast({
@@ -106,6 +134,35 @@ export default function DialogueSettingsPage() {
           onSubmit={handleSave}
           className="rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0b101a] p-6 shadow-sm"
         >
+          <div className="space-y-2 pb-6 border-b border-gray-100 dark:border-slate-800">
+            <Label htmlFor="rerank-threshold" className="text-base">
+              RAG 重排丢弃阈值
+            </Label>
+            <div className="flex items-center gap-3">
+              <Input
+                id="rerank-threshold"
+                inputMode="decimal"
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={ragRerankScoreThreshold}
+                onChange={(e) => setRagRerankScoreThreshold(e.target.value)}
+                className="w-40"
+                placeholder={String(DEFAULT_RAG_RERANK_SCORE_THRESHOLD)}
+              />
+              <span className="text-sm text-gray-500 dark:text-slate-500">
+                0~1，低于该分数的重排片段将直接丢弃（默认{" "}
+                {DEFAULT_RAG_RERANK_SCORE_THRESHOLD}）
+              </span>
+            </div>
+            {thresholdUpdatedAt && (
+              <p className="text-xs text-gray-400 dark:text-slate-500">
+                最近保存：{new Date(thresholdUpdatedAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="system-prompt" className="text-base">
               System Prompt

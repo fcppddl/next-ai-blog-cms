@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Globe,
-  AtSign,
   Layers,
   Folder,
   MessageCircle,
@@ -57,8 +55,8 @@ export default function AdminProfileCard() {
 
   if (!profile) {
     return (
-      <div className="w-64 flex-shrink-0">
-        <div className="sticky top-24 animate-pulse">
+      <div className="w-full lg:w-64 lg:flex-shrink-0">
+        <div className="lg:sticky lg:top-24 animate-pulse">
           <div className="h-96 rounded-[16px] border border-[#E0E0E0] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:border-border dark:bg-card" />
         </div>
       </div>
@@ -73,8 +71,8 @@ export default function AdminProfileCard() {
   const emptyMark = "-";
 
   return (
-    <aside className="w-64 flex-shrink-0">
-      <div className="sticky top-24">
+    <aside className="w-full lg:w-64 lg:flex-shrink-0">
+      <div className="lg:sticky lg:top-24">
         <div className="overflow-hidden rounded-[16px] border border-[#E0E0E0] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] dark:border-border dark:bg-card dark:shadow-sm dark:hover:shadow-md">
           <div className="px-6 pb-6 pt-8">
             <div className="mb-4 flex justify-center">

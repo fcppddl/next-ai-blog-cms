@@ -12,7 +12,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <PublicLayout>
       <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex gap-8">
+        <div className="flex flex-col gap-8 lg:flex-row">
           {/* Sidebar */}
           <AdminProfileCard />
 

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { RetrievedChunk } from "@/lib/ai/companion";
+import { getResolvedRagRerankScoreThreshold } from "@/lib/ai/companion-settings";
 
 /**
  * 重排序 OpenAI 兼容接口在 **compatible-api**（与 chat 的 compatible-mode 不同）。
@@ -140,14 +141,17 @@ export async function rerankWithQwen3Rerank(params: {
       return null;
     }
 
+    const scoreThreshold = await getResolvedRagRerankScoreThreshold();
+
     const reranked: RetrievedChunk[] = [];
     for (const row of parsed) {
       const chunk = chunks[row.index];
       if (!chunk) continue;
-      reranked.push({
-        ...chunk,
-        score: row.relevance_score,
-      });
+      const score = row.relevance_score;
+      if (!Number.isFinite(score) || score < scoreThreshold) {
+        continue;
+      }
+      reranked.push({ ...chunk, score });
       if (reranked.length >= topN) break;
     }
 
