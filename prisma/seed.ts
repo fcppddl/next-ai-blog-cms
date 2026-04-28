@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEFAULT_COMPANION_SYSTEM_PERSONA } from "../lib/ai/companion";
+import {
+  DEFAULT_COMPANION_SYSTEM_PERSONA,
+  DEFAULT_RAG_RERANK_SCORE_THRESHOLD,
+} from "../lib/ai/companion";
 import { AppSettingKeys } from "../lib/ai/companion-settings";
 
 const prisma = new PrismaClient();
@@ -17,6 +20,18 @@ async function main() {
     },
   });
   console.log("✅ 对话默认 System Prompt 已写入 app_settings");
+
+  await prisma.appSetting.upsert({
+    where: { key: AppSettingKeys.ragRerankScoreThreshold },
+    update: {},
+    create: {
+      key: AppSettingKeys.ragRerankScoreThreshold,
+      value: String(DEFAULT_RAG_RERANK_SCORE_THRESHOLD),
+    },
+  });
+  console.log(
+    `✅ RAG rerank 阈值默认值已写入 app_settings（${DEFAULT_RAG_RERANK_SCORE_THRESHOLD}）`,
+  );
 
   // 创建默认管理员用户
   const adminPassword = await bcrypt.hash(

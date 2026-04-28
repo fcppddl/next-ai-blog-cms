@@ -28,6 +28,9 @@ const PROMPT_ARTICLE_LIMIT = 120;
 export const DEFAULT_COMPANION_SYSTEM_PERSONA =
   "你是个人博客网站的智能助手。你的语气亲切、有边界、不过度夸张。";
 
+/** RAG 重排后片段最低保留分（0~1）；与 `app_settings.rag_rerank_score_threshold` 未配置时的运行时回退、以及 seed 写入内容一致 */
+export const DEFAULT_RAG_RERANK_SCORE_THRESHOLD = 0.6;
+
 /** 助手回复末尾的机器可读标记，用于解析是否参考站内文章及引用列表 */
 export const ASSISTANT_RAG_META_MARKER = "__RAG_META__";
 
