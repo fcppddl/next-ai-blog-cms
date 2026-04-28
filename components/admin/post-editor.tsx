@@ -13,6 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -124,6 +132,11 @@ export default function PostEditor({ postId }: PostEditorProps) {
   const editorRef = useRef<TiptapEditorHandle>(null);
   const articleFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
+  const [pendingArticleFile, setPendingArticleFile] = useState<File | null>(
+    null,
+  );
+
   const {
     register,
     handleSubmit,
@@ -136,13 +149,14 @@ export default function PostEditor({ postId }: PostEditorProps) {
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const title = watch("title");
+  const slug = watch("slug");
 
   // Auto-generate slug from title
   useEffect(() => {
-    if (!isEditing && title) {
-      setValue("slug", createSlug(title));
+    if (!isEditing && !slug) {
+      setValue("slug", createSlug(title ?? ""));
     }
-  }, [title, isEditing, setValue]);
+  }, [title, slug, isEditing, setValue]);
 
   // Load categories and tags
   useEffect(() => {
@@ -203,19 +217,8 @@ export default function PostEditor({ postId }: PostEditorProps) {
     if (matched) setCategoryId(matched.id);
   };
 
-  const handleArticleFileChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file) return;
-      if (!/\.(md|markdown|txt)$/i.test(file.name)) {
-        toast({
-          title: "请上传 Markdown 或文本文件",
-          description: "支持 .md、.markdown、.txt",
-          variant: "destructive",
-        });
-        return;
-      }
+  const applyArticleFile = useCallback(
+    (file: File) => {
       const reader = new FileReader();
       reader.onload = () => {
         const raw = String(reader.result ?? "");
@@ -237,6 +240,34 @@ export default function PostEditor({ postId }: PostEditorProps) {
       reader.readAsText(file, "UTF-8");
     },
     [setValue, toast],
+  );
+
+  const handleArticleFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      if (!/\.(md|markdown|txt)$/i.test(file.name)) {
+        toast({
+          title: "请上传 Markdown 或文本文件",
+          description: "支持 .md、.markdown、.txt",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const hasExistingContent = (editorRef.current?.getMarkdown() ?? content)
+        .trim()
+        .length > 0;
+      if (isEditing && hasExistingContent) {
+        setPendingArticleFile(file);
+        setOverwriteDialogOpen(true);
+        return;
+      }
+
+      applyArticleFile(file);
+    },
+    [applyArticleFile, content, isEditing, toast],
   );
 
   const onSubmit = useCallback(
@@ -296,6 +327,40 @@ export default function PostEditor({ postId }: PostEditorProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <Dialog open={overwriteDialogOpen} onOpenChange={setOverwriteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>覆盖当前内容？</DialogTitle>
+            <DialogDescription>
+              当前文章已有内容，继续上传将覆盖标题与正文。你可以先保存草稿，或取消本次上传。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOverwriteDialogOpen(false);
+                setPendingArticleFile(null);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                const f = pendingArticleFile;
+                setOverwriteDialogOpen(false);
+                setPendingArticleFile(null);
+                if (f) applyArticleFile(f);
+              }}
+            >
+              继续上传
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button
@@ -355,26 +420,22 @@ export default function PostEditor({ postId }: PostEditorProps) {
             )}
             {published ? "已发布" : "草稿"}
           </button>
-          {!isEditing && (
-            <>
-              <input
-                ref={articleFileInputRef}
-                type="file"
-                accept=".md,.markdown,.txt,text/markdown,text/plain"
-                className="hidden"
-                onChange={handleArticleFileChange}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1.5 h-8 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/10"
-                onClick={() => articleFileInputRef.current?.click()}
-              >
-                <Upload className="h-3.5 w-3.5" />
-                上传
-              </Button>
-            </>
-          )}
+          <input
+            ref={articleFileInputRef}
+            type="file"
+            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            className="hidden"
+            onChange={handleArticleFileChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-1.5 h-8 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/10"
+            onClick={() => articleFileInputRef.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            上传
+          </Button>
           <Button type="submit" disabled={saving} className="gap-2">
             <Save className="h-4 w-4" />
             {saving ? "保存中..." : isEditing ? "更新" : "创建"}

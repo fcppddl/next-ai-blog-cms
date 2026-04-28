@@ -16,6 +16,7 @@ interface Post {
   slug: string;
   excerpt: string | null;
   coverImage: string | null;
+  featured: boolean;
   readingTime: number | null;
   views: number;
   createdAt: string;
@@ -123,9 +124,19 @@ export default function PostList({ category, tag }: PostListProps) {
                   className={`flex min-w-0 flex-1 flex-col justify-between gap-4 ${hasCover ? "order-2 sm:order-1" : ""}`}
                 >
                   <div className="space-y-3">
-                    <h2 className="text-lg font-semibold leading-snug text-[#262626] transition-colors group-hover:text-primary sm:text-xl dark:text-foreground">
-                      {post.title}
-                    </h2>
+                    <div className="relative min-w-0">
+                      <h2
+                        className={`text-lg font-semibold leading-snug text-[#262626] transition-colors group-hover:text-primary sm:text-xl dark:text-foreground ${post.featured ? "pr-[4.5rem]" : ""}`}
+                      >
+                        {post.title}
+                      </h2>
+                      {post.featured ? (
+                        <span className="absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                          <span aria-hidden>⭐</span>
+                          精选
+                        </span>
+                      ) : null}
+                    </div>
                     {post.excerpt && (
                       <p className="line-clamp-2 text-sm leading-relaxed text-[#595959] dark:text-muted-foreground">
                         {post.excerpt}

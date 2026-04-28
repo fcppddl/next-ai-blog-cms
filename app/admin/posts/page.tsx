@@ -124,13 +124,13 @@ export default function PostsPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-10 min-w-[8rem] shrink-0 border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100">
+            <SelectTrigger className="h-10 min-w-[8rem] shrink-0 cursor-pointer border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100">
               <SelectValue placeholder="状态" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部</SelectItem>
-              <SelectItem value="published">已发布</SelectItem>
-              <SelectItem value="draft">草稿</SelectItem>
+              <SelectItem value="all" className="cursor-pointer">全部</SelectItem>
+              <SelectItem value="published" className="cursor-pointer">已发布</SelectItem>
+              <SelectItem value="draft" className="cursor-pointer">草稿</SelectItem>
             </SelectContent>
           </Select>
         </div>
