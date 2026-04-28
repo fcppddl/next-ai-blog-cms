@@ -3,6 +3,13 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
 import { Markdown } from "tiptap-markdown";
 import { AICompletion } from "@/lib/editor/ai-completion-extension";
 import { cn } from "@/lib/utils";
@@ -31,7 +38,22 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     const editor = useEditor({
       extensions: [
         StarterKit,
-        Markdown.configure({ html: false, transformPastedText: true }),
+        Link.configure({
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+        }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        Markdown.configure({
+          html: false,
+          transformPastedText: true,
+          transformCopiedText: true,
+        }),
         AICompletion,
       ],
       editorProps: {
