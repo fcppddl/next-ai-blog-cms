@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         slug: true,
         excerpt: true,
         coverImage: true,
+        featured: true,
         readingTime: true,
         views: true,
         createdAt: true,
