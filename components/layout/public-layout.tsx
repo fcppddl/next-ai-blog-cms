@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, PenSquare, Info } from "lucide-react";
+import { PenSquare, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -21,7 +21,6 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -96,69 +95,28 @@ export default function PublicLayout({
             </nav>
 
             {/* Mobile */}
-            <div className="flex items-center gap-2 md:hidden">
-              <ThemeToggle />
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="菜单"
-              >
-                {menuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {menuOpen && (
-            <div className="border-t border-border bg-background/95 backdrop-blur-md md:hidden">
-              <nav className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4">
-                {navLinks.map((link) => (
-                <Button
-                  key={link.href}
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="w-fit justify-start gap-2"
-                >
-                  <Link
-                    href={link.href}
-                    aria-label={link.ariaLabel}
-                    onClick={() => setMenuOpen(false)}
-                  >
+            <nav className="flex items-center gap-2 md:hidden">
+              {navLinks.map((link) => (
+                <Button key={link.href} asChild variant="ghost" size="icon">
+                  <Link href={link.href} aria-label={link.ariaLabel}>
                     <Info
                       className="h-5 w-5 text-indigo-600 dark:text-indigo-300"
                       aria-hidden
                     />
-                    <span>{link.ariaLabel}</span>
                   </Link>
                 </Button>
-                ))}
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="w-fit justify-start gap-2"
-              >
-                <Link
-                  href="/admin"
-                  aria-label="编辑"
-                  onClick={() => setMenuOpen(false)}
-                >
+              ))}
+              <Button asChild variant="ghost" size="icon">
+                <Link href="/admin" aria-label="编辑">
                   <PenSquare
                     className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-400"
                     aria-hidden
                   />
-                  <span>编辑</span>
                 </Link>
               </Button>
-              </nav>
-            </div>
-          )}
+              <ThemeToggle />
+            </nav>
+          </div>
         </header>
 
         {/* Main */}
