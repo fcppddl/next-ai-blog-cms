@@ -9,15 +9,8 @@ export function cn(...inputs: ClassValue[]) {
  * 创建 URL 友好的 slug
  */
 export function createSlug(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .trim()
-      .replace(/[\u4e00-\u9fff]/g, "")
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "") || `post-${Date.now()}`
-  );
+  void text;
+  return `post-${Date.now()}`;
 }
 
 /**

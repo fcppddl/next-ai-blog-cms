@@ -149,13 +149,14 @@ export default function PostEditor({ postId }: PostEditorProps) {
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const title = watch("title");
+  const slug = watch("slug");
 
   // Auto-generate slug from title
   useEffect(() => {
-    if (!isEditing && title) {
-      setValue("slug", createSlug(title));
+    if (!isEditing && !slug) {
+      setValue("slug", createSlug(title ?? ""));
     }
-  }, [title, isEditing, setValue]);
+  }, [title, slug, isEditing, setValue]);
 
   // Load categories and tags
   useEffect(() => {
