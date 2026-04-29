@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   RefreshCw,
   Trash2,
   Database,
@@ -13,6 +21,7 @@ import {
   CheckCircle2,
   AlertCircle,
   PlusCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 interface VectorPostRow {
@@ -89,6 +98,10 @@ export default function SettingsPage() {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [indexingAll, setIndexingAll] = useState(false);
   const [postActions, setPostActions] = useState<Record<string, boolean>>({});
+  const [pendingDelete, setPendingDelete] = useState<{
+    postId: string;
+    title: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const fetchStatus = useCallback(async () => {
@@ -150,7 +163,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteIndex = async (postId: string) => {
+  const confirmDeleteIndex = async () => {
+    if (!pendingDelete) return;
+    const { postId } = pendingDelete;
+    setPendingDelete(null);
     setPostActions((prev) => ({ ...prev, [`del_${postId}`]: true }));
     try {
       const { ok, data } = await postVectorAction({
@@ -377,7 +393,12 @@ export default function SettingsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDeleteIndex(post.postId)}
+                              onClick={() =>
+                                setPendingDelete({
+                                  postId: post.postId,
+                                  title: post.title,
+                                })
+                              }
                               disabled={!!postActions[`del_${post.postId}`]}
                               className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
                             >
@@ -413,6 +434,46 @@ export default function SettingsPage() {
             </table>
           )}
         </div>
+
+        <Dialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+        >
+          <DialogContent showCloseButton className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-start gap-3 sm:text-left">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                  <AlertTriangle className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="space-y-1.5 pt-0.5">
+                  <DialogTitle>删除向量索引</DialogTitle>
+                  <DialogDescription className="text-left">
+                    确认删除「{pendingDelete?.title ?? ""}」的 RAG
+                    向量索引？此操作不可恢复，可随时重新建立索引。
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <DialogFooter className="gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingDelete(null)}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => void confirmDeleteIndex()}
+              >
+                删除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
