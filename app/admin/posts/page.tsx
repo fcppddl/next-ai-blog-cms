@@ -21,8 +21,17 @@ import {
   Eye,
   EyeOff,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Post {
   id: string;
@@ -45,6 +54,10 @@ export default function PostsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const fetchPosts = useCallback(async () => {
@@ -65,8 +78,10 @@ export default function PostsPage() {
     fetchPosts();
   }, [fetchPosts]);
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`确认删除文章「${title}」？此操作不可恢复。`)) return;
+  const confirmDeletePost = async () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    setPendingDelete(null);
     setDeletingId(id);
     const res = await fetch(`/api/admin/posts/${id}`, { method: "DELETE" });
     if (res.ok) {
@@ -203,7 +218,9 @@ export default function PostsPage() {
                           size="sm"
                           variant="outline"
                           className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
-                          onClick={() => handleDelete(post.id, post.title)}
+                          onClick={() =>
+                            setPendingDelete({ id: post.id, title: post.title })
+                          }
                           disabled={deletingId === post.id}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -232,6 +249,45 @@ export default function PostsPage() {
             </div>
           )}
         </div>
+
+        <Dialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+        >
+          <DialogContent showCloseButton className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-start gap-3 sm:text-left">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                  <AlertTriangle className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="space-y-1.5 pt-0.5">
+                  <DialogTitle>删除文章</DialogTitle>
+                  <DialogDescription className="text-left">
+                    确认删除文章「{pendingDelete?.title ?? ""}」？此操作不可恢复。
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <DialogFooter className="gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingDelete(null)}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => void confirmDeletePost()}
+              >
+                删除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

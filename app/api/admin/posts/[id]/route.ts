@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { deletePostIndex } from "@/lib/vector/indexer";
 import { z } from "zod";
 
 const updatePostSchema = z.object({
@@ -136,6 +137,16 @@ export async function DELETE(
   const { id } = await params;
   const existing = await prisma.post.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "文章不存在" }, { status: 404 });
+  try {
+    await deletePostIndex(id);
+  } catch (error) {
+    console.error("删除文章向量索引失败:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: `删除向量索引失败，文章未删除: ${msg}` },
+      { status: 500 },
+    );
+  }
   await prisma.post.delete({ where: { id } });
   return NextResponse.json({ message: "文章删除成功" });
 }

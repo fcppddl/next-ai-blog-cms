@@ -6,8 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SimpleLoading } from "@/components/ui/loading";
-import { Plus, Trash2, Edit, X, Check } from "lucide-react";
+import { Plus, Trash2, Edit, X, Check, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createSlug } from "@/lib/utils";
 
 interface Tag {
@@ -25,6 +33,11 @@ export default function TagsPage() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [editValues, setEditValues] = useState({ name: "", slug: "" });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const fetchTags = async () => {
@@ -77,13 +90,19 @@ export default function TagsPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`确认删除标签「${name}」？`)) return;
+  const confirmDeleteTag = async () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    setPendingDelete(null);
+    setDeletingId(id);
     const res = await fetch(`/api/admin/tags/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast({ title: "标签已删除" });
       fetchTags();
+    } else {
+      toast({ title: "删除失败", variant: "destructive" });
     }
+    setDeletingId(null);
   };
 
   return (
@@ -254,7 +273,10 @@ export default function TagsPage() {
                               size="sm"
                               variant="outline"
                               className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
-                              onClick={() => handleDelete(tag.id, tag.name)}
+                              onClick={() =>
+                                setPendingDelete({ id: tag.id, name: tag.name })
+                              }
+                              disabled={deletingId === tag.id}
                             >
                               <Trash2 className="h-3 w-3" />
                               删除
@@ -269,6 +291,45 @@ export default function TagsPage() {
             </table>
           )}
         </div>
+
+        <Dialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+        >
+          <DialogContent showCloseButton className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-start gap-3 sm:text-left">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                  <AlertTriangle className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="space-y-1.5 pt-0.5">
+                  <DialogTitle>删除标签</DialogTitle>
+                  <DialogDescription className="text-left">
+                    确认删除标签「{pendingDelete?.name ?? ""}」？此操作不可恢复。
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <DialogFooter className="gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingDelete(null)}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => void confirmDeleteTag()}
+              >
+                删除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

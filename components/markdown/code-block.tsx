@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import hljs from "highlight.js";
-import "highlight.js/styles/github-dark.css";
+import { useTheme } from "@/components/providers/theme-provider";
+import { cn } from "@/lib/utils";
+import "./code-block.css";
 
 interface CodeBlockProps {
   children: string;
@@ -39,6 +41,7 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
 }
 
 export default function CodeBlock({ children, className }: CodeBlockProps) {
+  const { theme } = useTheme();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "fail">("idle");
   const [highlighted, setHighlighted] = useState<string[]>([]);
 
@@ -67,17 +70,48 @@ export default function CodeBlock({ children, className }: CodeBlockProps) {
   };
 
   const lines = children.split("\n");
+  const lineNumDigits = Math.max(1, String(lines.length).length);
+  const lineGutterStyle = {
+    width: `${lineNumDigits + 0.375}ch`,
+    minWidth: `${lineNumDigits + 0.375}ch`,
+    maxWidth: `${lineNumDigits + 0.375}ch`,
+  } as const;
 
   return (
-    <div className="not-prose relative my-4 overflow-hidden rounded-md border border-[#3c3c3c] bg-[#1e1e1e]">
-      <div className="flex items-center justify-between border-b border-[#3c3c3c] bg-[#2d2d2d] px-4 py-2">
-        <span className="text-xs text-gray-400 font-mono">
+    <div
+      data-code-theme={theme}
+      className={cn(
+        "not-prose relative my-4 overflow-hidden rounded-lg border text-[0.875em] leading-relaxed",
+        theme === "dark"
+          ? "border-[#3c3c3c] bg-[#1e1e1e]"
+          : "border-black/[0.08] bg-[#f5f5f7] shadow-sm"
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between border-b px-4 py-2",
+          theme === "dark"
+            ? "border-[#3c3c3c] bg-[#2d2d2d]"
+            : "border-black/[0.06] bg-[#f0f0f3]"
+        )}
+      >
+        <span
+          className={cn(
+            "text-xs font-mono",
+            theme === "dark" ? "text-gray-400" : "text-neutral-600"
+          )}
+        >
           {language ?? "code"}
         </span>
         <button
           type="button"
           onClick={handleCopy}
-          className="cursor-pointer text-xs text-gray-400 hover:text-gray-200 transition-colors px-2 py-1 rounded"
+          className={cn(
+            "cursor-pointer rounded px-2 py-1 text-xs transition-colors",
+            theme === "dark"
+              ? "text-gray-400 hover:text-gray-200"
+              : "text-neutral-600 hover:text-neutral-900"
+          )}
         >
           {copyState === "ok"
             ? "已复制!"
@@ -86,17 +120,28 @@ export default function CodeBlock({ children, className }: CodeBlockProps) {
               : "复制"}
         </button>
       </div>
-      <div className="overflow-x-auto bg-[#1e1e1e] px-4 py-3 text-[0.875em] leading-relaxed">
+      <div
+        className={cn(
+          "overflow-x-auto px-4 py-3",
+          theme === "dark" ? "bg-[#1e1e1e]" : "bg-[#f5f5f7]"
+        )}
+      >
         <table className="w-full border-collapse border-spacing-0">
           <tbody>
             {lines.map((line, i) => (
               <tr key={i}>
-                <td className="w-12 min-w-[3rem] select-none px-0 py-0 text-right align-top font-mono text-xs text-[#858585]">
+                <td
+                  style={lineGutterStyle}
+                  className={cn(
+                    "select-none px-0 py-0 text-right align-top font-mono text-xs tabular-nums",
+                    theme === "dark" ? "text-[#858585]" : "text-neutral-400"
+                  )}
+                >
                   {i + 1}
                 </td>
-                <td className="py-0 pl-4 pr-0 align-top font-mono text-sm">
+                <td className="min-w-0 py-0 pl-2 pr-0 align-top font-mono text-sm">
                   <code
-                    className="hljs !m-0 block w-full !bg-transparent !p-0 text-[#d4d4d4]"
+                    className="hljs !m-0 block w-full !bg-transparent !p-0"
                     dangerouslySetInnerHTML={{
                       __html:
                         i === lines.length - 1 && line === ""
