@@ -120,7 +120,7 @@ export default function DialogueSettingsPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-3xl space-y-4">
+      <form onSubmit={handleSave} className="w-full space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
@@ -128,13 +128,14 @@ export default function DialogueSettingsPage() {
               对话设置
             </h1>
           </div>
+          <Button type="submit" disabled={saving} className="gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? "保存中…" : "保存更改"}
+          </Button>
         </div>
 
-        <form
-          onSubmit={handleSave}
-          className="rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0b101a] p-6 shadow-sm"
-        >
-          <div className="space-y-2 pb-6 border-b border-gray-100 dark:border-slate-800">
+        <div className="w-full rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0b101a] p-6 shadow-sm">
+          <div className="space-y-2 pb-6">
             <Label htmlFor="rerank-threshold" className="text-base">
               RAG 重排丢弃阈值
             </Label>
@@ -186,14 +187,8 @@ export default function DialogueSettingsPage() {
               )}
             </div>
           </div>
-          <div className="mt-6 flex justify-end">
-            <Button type="submit" disabled={saving}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? "保存中…" : "保存"}
-            </Button>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </AdminLayout>
   );
 }
