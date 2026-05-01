@@ -234,7 +234,7 @@ export default function MarkdownRenderer({
         );
       },
       table: ({ children, ...props }) => (
-        <div className="overflow-x-auto my-8">
+        <div className="overflow-x-auto my-5">
           <table className="min-w-full border border-border" {...props}>
             {children}
           </table>
@@ -363,12 +363,14 @@ export default function MarkdownRenderer({
               prose-h2:mt-10 prose-h2:mb-5 prose-h2:border-l-4 prose-h2:border-primary/40 prose-h2:pl-4 prose-h2:text-2xl
               prose-h3:mt-8 prose-h3:mb-4 prose-h3:text-xl
               prose-p:mb-6 prose-p:leading-[1.7] prose-p:text-foreground
+              prose-hr:my-5 prose-hr:border-border
               prose-li:mb-2 prose-li:text-foreground
               prose-strong:font-bold prose-strong:text-foreground
               prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.9em] prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none
-              prose-pre:my-8 prose-pre:bg-transparent prose-pre:p-0
+              prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0
               prose-a:font-semibold prose-a:text-primary prose-a:underline prose-a:underline-offset-4
-              [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto
+              prose-table:my-0
+              [&_table]:max-w-full
             "
           >
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>

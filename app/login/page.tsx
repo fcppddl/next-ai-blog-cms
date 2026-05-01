@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { LogIn, AlertCircle } from "lucide-react";
@@ -56,13 +56,8 @@ function LoginForm() {
       if (result?.error) {
         setError("用户名或密码错误");
       } else if (result?.ok) {
-        const session = await getSession();
-        if (session?.user?.role === "ADMIN") {
-          router.push(callbackUrl);
-          router.refresh();
-        } else {
-          setError("权限不足，只有管理员可以访问");
-        }
+        router.push(callbackUrl);
+        router.refresh();
       }
     } catch {
       setError("登录过程中发生错误，请重试");

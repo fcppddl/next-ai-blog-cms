@@ -110,7 +110,7 @@ export default function Mermaid({ chart, id }: MermaidProps) {
 
   if (!svg) {
     return (
-      <div className="flex justify-center items-center my-4 h-20">
+      <div className="flex justify-center items-center my-0 h-20">
         <div className="flex items-center space-x-2 text-muted-foreground">
           <div className="w-4 h-4 border-2 border-border border-t-foreground rounded-full animate-spin" />
           <span className="text-sm">渲染图表中...</span>
@@ -122,7 +122,7 @@ export default function Mermaid({ chart, id }: MermaidProps) {
   return (
     <div
       ref={ref}
-      className="flex justify-center my-4"
+      className="flex justify-center my-0"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

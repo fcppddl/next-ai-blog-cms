@@ -105,6 +105,12 @@ export default async function PostPage({ params }: PageProps) {
                 {post.readingTime} 分钟阅读
               </span>
             )}
+            {post.featured ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                <span aria-hidden>⭐</span>
+                精选
+              </span>
+            ) : null}
           </div>
 
           {post.coverImage && (
