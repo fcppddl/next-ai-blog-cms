@@ -81,7 +81,7 @@ export default function CodeBlock({ children, className }: CodeBlockProps) {
     <div
       data-code-theme={theme}
       className={cn(
-        "not-prose relative my-4 overflow-hidden rounded-lg border text-[0.875em] leading-relaxed",
+        "not-prose relative my-0 overflow-hidden rounded-lg border text-[0.875em] leading-relaxed",
         theme === "dark"
           ? "border-[#3c3c3c] bg-[#1e1e1e]"
           : "border-black/[0.08] bg-[#f5f5f7] shadow-sm"
