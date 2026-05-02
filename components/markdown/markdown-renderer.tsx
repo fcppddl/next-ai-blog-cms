@@ -10,6 +10,7 @@ import {
 } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkBlockquoteTightNewlines } from "@/lib/remark-blockquote-tight-newlines";
 import { List, ChevronRight, ChevronLeft, X } from "lucide-react";
 import Mermaid from "./mermaid";
 import CodeBlock from "./code-block";
@@ -374,7 +375,10 @@ export default function MarkdownRenderer({
               [&_table]:max-w-full
             "
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBlockquoteTightNewlines]}
+              components={markdownComponents}
+            >
               {safeContent}
             </ReactMarkdown>
           </div>
