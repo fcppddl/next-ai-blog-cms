@@ -139,3 +139,38 @@
   padding: 0.1em 0.3em;
   font-size: 0.875em;
 }
+
+/* 正文 Markdown：提高无序列表标记对比度（覆盖 typography prose-gray 的浅色 bullet） */
+.post-md-content.prose :where(ul > li)::marker,
+.post-md-content.prose :where(ul ul > li)::marker,
+.post-md-content.prose :where(ul ul ul > li)::marker {
+  color: var(--foreground);
+}
+
+/* 编辑区 / 正文区统一的引用块（浅灰左边线，与后台编辑器视觉一致） */
+.post-md-content.prose blockquote {
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--border);
+  background-color: transparent;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: 1rem;
+  padding-right: 0.5rem;
+  font-style: normal;
+  color: var(--foreground);
+  box-shadow: none;
+}
+.post-md-content.prose blockquote p {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-style: normal;
+  color: inherit;
+}
+.post-md-content.prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+.post-md-content.prose blockquote strong {
+  font-weight: 700;
+  color: var(--foreground);
+}
