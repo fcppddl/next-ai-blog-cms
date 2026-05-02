@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { LogIn, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,6 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin";
 
@@ -56,8 +55,8 @@ function LoginForm() {
       if (result?.error) {
         setError("用户名或密码错误");
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // 整页跳转，确保 Set-Cookie 后再进入受保护路由（避免与 client 导航竞态）。
+        window.location.assign(callbackUrl);
       }
     } catch {
       setError("登录过程中发生错误，请重试");
