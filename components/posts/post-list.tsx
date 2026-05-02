@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Calendar, Eye, Clock } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
+import { PostCategoryTags } from "@/components/posts/post-category-tags";
 
 interface PostTag {
   tag: { name: string; slug: string };
@@ -162,27 +163,12 @@ export default function PostList({ category, tag }: PostListProps) {
                       ) : null}
                     </div>
 
-                    {(post.category || post.tags.length > 0) && (
-                      <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-                        {post.category && (
-                          <span
-                            className="inline-flex h-7 min-w-7 items-center justify-center rounded-md text-sm leading-none text-[#595959] dark:text-muted-foreground"
-                            title={post.category.name}
-                            aria-label={post.category.name}
-                          >
-                            {post.category.icon ?? "🏷️"}
-                          </span>
-                        )}
-                        {post.tags.slice(0, 5).map(({ tag: t }) => (
-                          <span
-                            key={t.slug}
-                            className="rounded-md bg-[#F5F5F5] px-2 py-1 text-xs text-[#595959] dark:bg-muted dark:text-muted-foreground"
-                          >
-                            {t.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <PostCategoryTags
+                      category={post.category}
+                      tags={post.tags}
+                      tagLimit={5}
+                      className="justify-start sm:justify-end"
+                    />
                   </div>
                 </div>
               </Link>
