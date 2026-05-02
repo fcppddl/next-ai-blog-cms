@@ -10,7 +10,7 @@ export async function GET(
   const post = await prisma.post.findUnique({
     where: { slug, published: true },
     include: {
-      category: { select: { name: true, slug: true } },
+      category: { select: { name: true, slug: true, icon: true } },
       tags: { select: { tag: { select: { name: true, slug: true } } } },
     },
   });

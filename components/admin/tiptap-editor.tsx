@@ -37,7 +37,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
   ({ initialContent, onChange, className, minHeight = 500 }, ref) => {
     const editor = useEditor({
       extensions: [
-        StarterKit,
+        StarterKit.configure({ link: false }),
         Link.configure({
           openOnClick: false,
           autolink: true,
@@ -58,7 +58,10 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
       ],
       editorProps: {
         attributes: {
-          class: "prose prose-gray dark:prose-invert max-w-none focus:outline-none px-4 py-3 bg-white dark:bg-slate-950",
+          class:
+            "post-md-content prose prose-gray dark:prose-invert max-w-none focus:outline-none px-4 py-3 bg-white dark:bg-slate-950 " +
+            "prose-li:mb-2 prose-li:text-foreground prose-ul:list-disc [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square] " +
+            "prose-strong:font-bold prose-strong:text-foreground",
           style: `min-height:${minHeight}px`,
         },
       },

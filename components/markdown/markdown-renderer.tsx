@@ -10,6 +10,7 @@ import {
 } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkBlockquoteTightNewlines } from "@/lib/remark-blockquote-tight-newlines";
 import { List, ChevronRight, ChevronLeft, X } from "lucide-react";
 import Mermaid from "./mermaid";
 import CodeBlock from "./code-block";
@@ -258,7 +259,7 @@ export default function MarkdownRenderer({
       ),
       blockquote: ({ children, ...props }) => (
         <blockquote
-          className="my-8 border-l-[4px] border-primary/50 bg-muted/40 py-4 pl-6 font-serif italic text-muted-foreground"
+          className="not-prose my-6 border-l-4 border-border bg-transparent py-2 pl-4 pr-2 font-sans text-base leading-relaxed text-foreground [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_p]:mt-0 [&_p]:mb-2 [&_p]:not-italic [&_p:last-child]:mb-0 [&_strong]:font-bold [&_strong]:text-foreground"
           {...props}
         >
           {children}
@@ -357,7 +358,7 @@ export default function MarkdownRenderer({
 
           <div
             ref={contentRef}
-            className="prose prose-gray w-full min-w-0 max-w-full overflow-x-hidden break-words font-sans dark:prose-invert
+            className="post-md-content prose prose-gray w-full min-w-0 max-w-full overflow-x-hidden break-words font-sans dark:prose-invert
               prose-headings:font-sans prose-headings:font-bold prose-headings:text-foreground
               prose-h1:mt-10 prose-h1:mb-6 prose-h1:border-b prose-h1:border-border prose-h1:pb-3 prose-h1:text-3xl
               prose-h2:mt-10 prose-h2:mb-5 prose-h2:border-l-4 prose-h2:border-primary/40 prose-h2:pl-4 prose-h2:text-2xl
@@ -365,6 +366,7 @@ export default function MarkdownRenderer({
               prose-p:mb-6 prose-p:leading-[1.7] prose-p:text-foreground
               prose-hr:my-5 prose-hr:border-border
               prose-li:mb-2 prose-li:text-foreground
+              prose-ul:list-disc [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square]
               prose-strong:font-bold prose-strong:text-foreground
               prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.9em] prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none
               prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0
@@ -373,7 +375,10 @@ export default function MarkdownRenderer({
               [&_table]:max-w-full
             "
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBlockquoteTightNewlines]}
+              components={markdownComponents}
+            >
               {safeContent}
             </ReactMarkdown>
           </div>

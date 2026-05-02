@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { Calendar, Eye, Clock, ArrowLeft, Tag } from "lucide-react";
+import { Calendar, Eye, Clock, ArrowLeft } from "lucide-react";
 import PublicLayout from "@/components/layout/public-layout";
 import MarkdownRenderer from "@/components/markdown/markdown-renderer";
 import RelatedPosts from "@/components/posts/related-posts";
-import { Badge } from "@/components/ui/badge";
+import { PostCategoryTags } from "@/components/posts/post-category-tags";
 import {
   PostFullscreenRegion,
   PostFullscreenToggle,
@@ -64,33 +64,11 @@ export default async function PostPage({ params }: PageProps) {
 
         {/* Header */}
         <header className="mb-10">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {post.category && (
-              <Badge
-                variant="outline"
-                className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
-              >
-                {post.category.name}
-              </Badge>
-            )}
-            {post.tags?.map(
-              ({ tag: t }: { tag: { name: string; slug: string } }) => (
-                <span
-                  key={t.slug}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                >
-                  <Tag className="h-3 w-3" />
-                  {t.name}
-                </span>
-              ),
-            )}
-          </div>
-
           <h1 className="mb-6 text-4xl font-black leading-tight text-foreground">
             {post.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-6 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-sky-600/80 dark:text-sky-400/80" />
               {new Date(post.createdAt).toLocaleDateString("zh-CN")}
@@ -105,6 +83,10 @@ export default async function PostPage({ params }: PageProps) {
                 {post.readingTime} 分钟阅读
               </span>
             )}
+            <PostCategoryTags
+              category={post.category}
+              tags={post.tags ?? []}
+            />
             {post.featured ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
                 <span aria-hidden>⭐</span>
