@@ -37,7 +37,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
   ({ initialContent, onChange, className, minHeight = 500 }, ref) => {
     const editor = useEditor({
       extensions: [
-        StarterKit,
+        StarterKit.configure({ link: false }),
         Link.configure({
           openOnClick: false,
           autolink: true,
