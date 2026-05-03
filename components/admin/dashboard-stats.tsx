@@ -16,7 +16,9 @@ import {
 async function getStats() {
   const [
     totalPosts,
-    statusGroups,
+    publishedPosts,
+    draftPosts,
+    featuredPosts,
     categories,
     tags,
     viewsAgg,
@@ -25,10 +27,10 @@ async function getStats() {
     indexedPosts,
   ] = await Promise.all([
     prisma.post.count(),
-    prisma.post.groupBy({
-      by: ["published", "featured"],
-      _count: { id: true },
-    }),
+    // 与文章管理筛选一致：「已发布」= published=true，包含精选文章（featured 仅额外标记）
+    prisma.post.count({ where: { published: true } }),
+    prisma.post.count({ where: { published: false } }),
+    prisma.post.count({ where: { featured: true } }),
     prisma.category.count(),
     prisma.tag.count(),
     prisma.post.aggregate({ _sum: { views: true } }),
@@ -51,13 +53,6 @@ async function getStats() {
     }),
     prisma.postVectorIndex.count(),
   ]);
-
-  const publishedPosts =
-    statusGroups.find((s) => s.published === true)?._count.id ?? 0;
-  const draftPosts =
-    statusGroups.find((s) => s.published === false)?._count.id ?? 0;
-  const featuredPosts =
-    statusGroups.find((s) => s.featured === true)?._count.id ?? 0;
 
   return {
     totalPosts,
