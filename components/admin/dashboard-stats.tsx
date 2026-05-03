@@ -16,7 +16,9 @@ import {
 async function getStats() {
   const [
     totalPosts,
-    statusGroups,
+    publishedPosts,
+    draftPosts,
+    featuredPosts,
     categories,
     tags,
     viewsAgg,
@@ -25,10 +27,10 @@ async function getStats() {
     indexedPosts,
   ] = await Promise.all([
     prisma.post.count(),
-    prisma.post.groupBy({
-      by: ["published", "featured"],
-      _count: { id: true },
-    }),
+    // 与文章管理筛选一致：「已发布」= published=true，包含精选文章（featured 仅额外标记）
+    prisma.post.count({ where: { published: true } }),
+    prisma.post.count({ where: { published: false } }),
+    prisma.post.count({ where: { featured: true } }),
     prisma.category.count(),
     prisma.tag.count(),
     prisma.post.aggregate({ _sum: { views: true } }),
@@ -51,13 +53,6 @@ async function getStats() {
     }),
     prisma.postVectorIndex.count(),
   ]);
-
-  const publishedPosts =
-    statusGroups.find((s) => s.published === true)?._count.id ?? 0;
-  const draftPosts =
-    statusGroups.find((s) => s.published === false)?._count.id ?? 0;
-  const featuredPosts =
-    statusGroups.find((s) => s.featured === true)?._count.id ?? 0;
 
   return {
     totalPosts,
@@ -103,7 +98,6 @@ export default async function DashboardStats() {
     if (user?.profile?.displayName) displayName = user.profile.displayName;
   } catch {}
 
-  // AIGC START — 使用 text-foreground / bg-card 等语义色，避免 text-gray-900 在暗色下与深色底撞色
   return (
     <div className="space-y-6 text-card-foreground">
       {/* Welcome */}

@@ -77,7 +77,6 @@ export default function MarkdownRenderer({
   const [activeHeading, setActiveHeading] = useState<string>("");
   const [tocOpen, setTocOpen] = useState(false);
   const [desktopTocCollapsed, setDesktopTocCollapsed] = useState(false);
-  const [readingProgress, setReadingProgress] = useState(0);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -114,13 +113,6 @@ export default function MarkdownRenderer({
           "h1, h2, h3, h4, h5, h6"
         ) ?? [];
       const scrollTop = window.scrollY + 100;
-      const documentHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const progress =
-        documentHeight <= 0
-          ? 100
-          : Math.min(100, Math.max(0, (window.scrollY / documentHeight) * 100));
-      setReadingProgress(progress);
       let currentHeading = "";
       for (let i = headings.length - 1; i >= 0; i--) {
         if (headings[i].offsetTop <= scrollTop) {
@@ -310,13 +302,6 @@ export default function MarkdownRenderer({
           </div>
         </DialogContent>
       </Dialog>
-
-      <div className="fixed top-0 left-0 z-50 h-1 w-full bg-muted">
-        <div
-          className="h-full bg-primary transition-all duration-150 ease-out"
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
 
       <div className="flex gap-20 min-w-0">
         <div className="flex-1 min-w-0 overflow-x-hidden">

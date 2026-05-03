@@ -256,9 +256,8 @@ export default function PostEditor({ postId }: PostEditorProps) {
         return;
       }
 
-      const hasExistingContent = (editorRef.current?.getMarkdown() ?? content)
-        .trim()
-        .length > 0;
+      const hasExistingContent =
+        (editorRef.current?.getMarkdown() ?? content).trim().length > 0;
       if (isEditing && hasExistingContent) {
         setPendingArticleFile(file);
         setOverwriteDialogOpen(true);

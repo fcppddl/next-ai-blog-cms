@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Calendar, Eye, Clock } from "lucide-react";
@@ -43,6 +43,13 @@ export default function PostList({ category, tag }: PostListProps) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
+  const pageRef = useRef(1);
+  const totalPagesRef = useRef(1);
+
+  pageRef.current = page;
+  if (pagination) totalPagesRef.current = pagination.totalPages;
 
   const fetchPosts = useCallback(
     async (pageNum: number, append = false) => {
@@ -67,19 +74,52 @@ export default function PostList({ category, tag }: PostListProps) {
   );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setPage(1);
     fetchPosts(1).finally(() => setLoading(false));
   }, [fetchPosts]);
 
-  const loadMore = async () => {
-    const nextPage = page + 1;
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    const nextPage = pageRef.current + 1;
+    if (nextPage > totalPagesRef.current) return;
+
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    await fetchPosts(nextPage, true);
-    setPage(nextPage);
-    setLoadingMore(false);
-  };
+    try {
+      await fetchPosts(nextPage, true);
+      setPage(nextPage);
+    } finally {
+      setLoadingMore(false);
+      loadingMoreRef.current = false;
+    }
+  }, [fetchPosts]);
+
+  useEffect(() => {
+    if (loading) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    if (!pagination || pageRef.current >= pagination.totalPages) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting || loadingMoreRef.current) return;
+        if (pageRef.current >= totalPagesRef.current) return;
+
+        observer.unobserve(el);
+        void loadMore().finally(() => {
+          if (el.isConnected && sentinelRef.current === el) {
+            observer.observe(el);
+          }
+        });
+      },
+      { root: null, rootMargin: "240px 0px", threshold: 0 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, pagination, loadMore]);
 
   if (loading) {
     return <Loading className="py-20" />;
@@ -178,14 +218,17 @@ export default function PostList({ category, tag }: PostListProps) {
       </div>
 
       {pagination && page < pagination.totalPages && (
-        <div className="mt-10 flex justify-center">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="rounded-full border border-border px-6 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:border-primary hover:bg-primary/10 hover:text-foreground disabled:opacity-50"
-          >
-            {loadingMore ? "加载中..." : "加载更多"}
-          </button>
+        <div
+          ref={sentinelRef}
+          className="mt-10 flex min-h-12 items-center justify-center"
+          aria-live="polite"
+          aria-busy={loadingMore}
+        >
+          {loadingMore ? (
+            <span className="text-sm text-muted-foreground">加载中...</span>
+          ) : (
+            <span className="sr-only">向下滚动以加载更多文章</span>
+          )}
         </div>
       )}
     </div>
