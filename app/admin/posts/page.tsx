@@ -111,7 +111,9 @@ export default function PostsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">文章管理</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              文章管理
+            </h1>
           </div>
           <Link href="/admin/posts/new">
             <Button>
@@ -128,7 +130,10 @@ export default function PostsPage() {
             <Input
               placeholder="搜索文章..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pl-9 dark:bg-gray-800/80 dark:border-slate-700 dark:text-gray-100 dark:placeholder:text-slate-500"
             />
           </div>
@@ -143,9 +148,15 @@ export default function PostsPage() {
               <SelectValue placeholder="状态" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="cursor-pointer">全部</SelectItem>
-              <SelectItem value="published" className="cursor-pointer">已发布</SelectItem>
-              <SelectItem value="draft" className="cursor-pointer">草稿</SelectItem>
+              <SelectItem value="all" className="cursor-pointer">
+                全部
+              </SelectItem>
+              <SelectItem value="published" className="cursor-pointer">
+                已发布
+              </SelectItem>
+              <SelectItem value="draft" className="cursor-pointer">
+                草稿
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -160,36 +171,65 @@ export default function PostsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">标题</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">分类</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">状态</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">浏览</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">日期</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">操作</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                    标题
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                    分类
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                    状态
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                    浏览
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                    日期
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {posts.map((post) => (
-                  <tr key={post.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <tr
+                    key={post.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">{post.title}</div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-mono">{post.slug}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
+                        {post.title}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-mono">
+                        {post.slug}
+                      </div>
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       {post.category ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-slate-700/80 dark:text-gray-100 dark:border-slate-600">{post.category.name}</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-slate-700/80 dark:text-gray-100 dark:border-slate-600">
+                          {post.category.name}
+                        </span>
                       ) : (
-                        <span className="text-gray-400 dark:text-slate-500 text-xs">无分类</span>
+                        <span className="text-gray-400 dark:text-slate-500 text-xs">
+                          无分类
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {post.published ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">已发布</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                          已发布
+                        </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">草稿</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">
+                          草稿
+                        </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">{post.views}</td>
+                    <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
+                      {post.views}
+                    </td>
                     <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
@@ -205,10 +245,19 @@ export default function PostsPage() {
                           onClick={() => togglePublish(post)}
                           title={post.published ? "取消发布" : "发布"}
                         >
-                          {post.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {post.published ? (
+                            <EyeOff className="h-3 w-3" />
+                          ) : (
+                            <Eye className="h-3 w-3" />
+                          )}
                           {post.published ? "下架" : "发布"}
                         </Button>
-                        <Button asChild size="sm" variant="outline" className="gap-1 h-7 text-xs">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 h-7 text-xs"
+                        >
                           <Link href={`/admin/posts/${post.id}/edit`}>
                             <Edit className="h-3 w-3" />
                             编辑
@@ -237,13 +286,23 @@ export default function PostsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 p-4 border-t border-gray-100 dark:border-gray-700">
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
                 上一页
               </Button>
               <span className="flex items-center text-sm text-gray-500 dark:text-slate-400">
                 {page} / {totalPages}
               </span>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
                 下一页
               </Button>
             </div>
@@ -265,7 +324,8 @@ export default function PostsPage() {
                 <div className="space-y-1.5 pt-0.5">
                   <DialogTitle>删除文章</DialogTitle>
                   <DialogDescription className="text-left">
-                    确认删除文章「{pendingDelete?.title ?? ""}」？此操作不可恢复。
+                    确认删除文章「{pendingDelete?.title ?? ""}
+                    」？此操作不可恢复。
                   </DialogDescription>
                 </div>
               </div>

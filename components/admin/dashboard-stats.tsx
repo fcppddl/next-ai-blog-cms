@@ -98,7 +98,6 @@ export default async function DashboardStats() {
     if (user?.profile?.displayName) displayName = user.profile.displayName;
   } catch {}
 
-  // AIGC START — 使用 text-foreground / bg-card 等语义色，避免 text-gray-900 在暗色下与深色底撞色
   return (
     <div className="space-y-6 text-card-foreground">
       {/* Welcome */}
