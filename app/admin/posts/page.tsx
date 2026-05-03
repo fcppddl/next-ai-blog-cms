@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import Link from "next/link";
 import AdminLayout from "@/components/admin/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -22,6 +28,7 @@ import {
   EyeOff,
   Calendar,
   AlertTriangle,
+  Folder,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,6 +39,59 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+function AdminPostTruncatedTitle({ title }: { title: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [truncated, setTruncated] = useState(false);
+
+  const updateTruncated = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setTruncated(el.scrollWidth > el.clientWidth + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateTruncated();
+  }, [title, updateTruncated]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => updateTruncated());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateTruncated]);
+
+  const line = (
+    <div
+      ref={ref}
+      className={cn(
+        "font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs",
+        truncated && "cursor-default",
+      )}
+    >
+      {title}
+    </div>
+  );
+
+  if (!truncated) return line;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{line}</TooltipTrigger>
+      <TooltipContent side="top" sideOffset={8} className="max-w-md text-left">
+        {title}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface Post {
   id: string;
@@ -42,7 +102,7 @@ interface Post {
   views: number;
   createdAt: string;
   updatedAt: string;
-  category: { name: string; slug: string } | null;
+  category: { name: string; slug: string; icon?: string | null } | null;
   tags: { name: string; slug: string }[];
 }
 
@@ -107,6 +167,7 @@ export default function PostsPage() {
 
   return (
     <AdminLayout>
+      <TooltipProvider delayDuration={0}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -198,23 +259,28 @@ export default function PostsPage() {
                     className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
-                        {post.title}
-                      </div>
+                      <AdminPostTruncatedTitle title={post.title} />
                       <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-mono">
                         {post.slug}
                       </div>
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       {post.category ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-slate-700/80 dark:text-gray-100 dark:border-slate-600">
-                          {post.category.name}
+                        <span
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xl leading-none dark:border-slate-600 dark:bg-slate-700/80"
+                          title={post.category.name}
+                          aria-label={`分类：${post.category.name}`}
+                        >
+                          {post.category.icon?.trim() ? (
+                            <span aria-hidden>{post.category.icon.trim()}</span>
+                          ) : (
+                            <Folder
+                              className="h-4 w-4 text-blue-700 dark:text-slate-200"
+                              aria-hidden
+                            />
+                          )}
                         </span>
-                      ) : (
-                        <span className="text-gray-400 dark:text-slate-500 text-xs">
-                          无分类
-                        </span>
-                      )}
+                      ) : null}
                     </td>
                     <td className="px-6 py-4">
                       {post.published ? (
@@ -349,6 +415,7 @@ export default function PostsPage() {
           </DialogContent>
         </Dialog>
       </div>
+      </TooltipProvider>
     </AdminLayout>
   );
 }
