@@ -11,32 +11,27 @@ import {
   PostFullscreenRegion,
   PostFullscreenToggle,
 } from "@/components/posts/post-fullscreen-region";
+import {
+  getPublishedPostMeta,
+  getPublishedPostAndIncrementViews,
+} from "@/lib/posts/published-post";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-}
-
-async function getPost(slug: string) {
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/posts/${slug}`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return null;
-  return res.json();
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPost(slug);
+  const post = await getPublishedPostMeta(slug);
   if (!post) return { title: "Post Not Found" };
   return {
     title: post.title,
-    description: post.excerpt,
+    description: post.excerpt ?? undefined,
     openGraph: {
       title: post.title,
-      description: post.excerpt,
+      description: post.excerpt ?? undefined,
       images: post.coverImage ? [post.coverImage] : [],
     },
   };
@@ -44,7 +39,7 @@ export async function generateMetadata({
 
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPost(slug);
+  const post = await getPublishedPostAndIncrementViews(slug);
 
   if (!post) notFound();
 
@@ -83,10 +78,7 @@ export default async function PostPage({ params }: PageProps) {
                 {post.readingTime} 分钟阅读
               </span>
             )}
-            <PostCategoryTags
-              category={post.category}
-              tags={post.tags ?? []}
-            />
+            <PostCategoryTags category={post.category} tags={post.tags ?? []} />
             {post.featured ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
                 <span aria-hidden>⭐</span>
