@@ -10,6 +10,8 @@ import {
   getAuthorSummary,
   getPublicArticleMeta,
   parseAssistantRagMeta,
+  listDistinctArticlesFromChunks,
+  resolveRagSourcesForDoneEvent,
   visibleFinalPrefixLen,
   visibleStreamingPrefixLen,
   type RetrievedChunk,
@@ -463,37 +465,16 @@ export async function POST(request: NextRequest) {
 
         const rawFull = (response.content || streamedContent).trimEnd();
         const parsed = parseAssistantRagMeta(rawFull);
-
-        const serverFallbackSources =
-          usingRAG && ragChunks
-            ? Array.from(
-                ragChunks.reduce((map, chunk) => {
-                  const slug = chunk.metadata.slug;
-                  if (slug && !map.has(slug)) {
-                    map.set(slug, {
-                      slug,
-                      title: chunk.metadata.title || slug,
-                    });
-                  }
-                  return map;
-                }, new Map<string, { slug: string; title: string }>()),
-              ).map(([, v]) => v)
+        const ragWhitelist =
+          usingRAG && ragChunks?.length
+            ? listDistinctArticlesFromChunks(ragChunks)
             : [];
-
-        // 解析成功时完全信任模型：ragUsed 为 false 则不展示参考列表；不为 articles 使用向量兜底。
-        // 仅当 __RAG_META__ 解析失败（parseOk 为 false）时，才用检索结果作为兜底列表。
-        let sources: Array<{ slug: string; title: string }> = [];
-        if (parsed.parseOk) {
-          if (parsed.ragUsed && parsed.articles.length > 0) {
-            sources = parsed.articles;
-          }
-        } else if (serverFallbackSources.length > 0) {
-          sources = serverFallbackSources;
-        }
+        const { sources, ragUsedOut } = resolveRagSourcesForDoneEvent(
+          parsed,
+          ragWhitelist,
+        );
 
         const displayContent = parsed.displayText;
-
-        const ragUsedOut = parsed.parseOk ? parsed.ragUsed : false;
 
         sendEvent("done", {
           content: displayContent,

@@ -44,7 +44,7 @@ const COMPANION_RAG_META_RULE = `
    或 ${ASSISTANT_RAG_META_MARKER}{"ragUsed":false,"articles":[]}
    - 该行必须以 ${ASSISTANT_RAG_META_MARKER} 开头，其后紧跟合法 JSON 对象，整行无其它前缀、后缀、空格说明；不要用 Markdown 代码块包裹该行。
    - 字段 ragUsed（必填，只能填英文小写 true / false）：表示你在写本段回答时是否实际依据了上方提供的「文章列表」或「检索到的相关内容」中的具体篇目。依据了任一篇的具体内容则 true；若完全未依据具体篇目（例如纯闲聊、只谈作者概况而未点名文章、或声明找不到信息），则 false。
-   - 字段 articles：当 ragUsed 为 true 时，列出你实际依据的篇目（slug、title 与站内一致，最多 3 篇）；当 ragUsed 为 false 时，articles 必须为 []。
+   - 字段 articles：当 ragUsed 为 true 时，列出你实际依据的全部篇目（slug、title 与站内一致，篇数不限）；当 ragUsed 为 false 时，articles 必须为 []。
    - JSON 须可被标准 JSON.parse 解析：布尔值为 true/false，字符串内双引号须转义为 \\"，禁止尾逗号，该 JSON 不要换行截断。
    合法示例：
    ${ASSISTANT_RAG_META_MARKER}{"ragUsed":true,"articles":[{"slug":"welcome-to-my-blog","title":"欢迎来到我的博客"}]}
@@ -296,6 +296,22 @@ export function buildRAGOnlySystemPrompt(params: {
     })
     .join("\n\n");
 
+  const retrievedArticles = listDistinctArticlesFromChunks(chunks);
+  const whitelistSection =
+    retrievedArticles.length > 0
+      ? `【本次检索涉及的篇目】（正文推荐与 ${ASSISTANT_RAG_META_MARKER} 的 articles **仅允许**下列 slug 与标题，禁止出现下列以外的篇名或 slug）\n${retrievedArticles
+          .map(
+            (a, i) =>
+              `${i + 1}. 《${a.title}》（slug: ${a.slug}）`,
+          )
+          .join("\n")}\n`
+      : "";
+
+  const citeRule =
+    retrievedArticles.length > 0
+      ? `3. 引用或推荐文章时，标题与 slug 必须与上方「本次检索涉及的篇目」完全一致；不得超过该列表范围，凡实际依据的篇目均应写入 ${ASSISTANT_RAG_META_MARKER} 的 articles（篇数不限）。`
+      : `3. 当前未检索到文章片段：不要在回答中虚构站内文章或 slug；${ASSISTANT_RAG_META_MARKER} 必须为 ragUsed:false 且 articles 为 []。`;
+
   return `${systemPersona}
 
 ${COMPANION_RAG_META_REMINDER_OPEN}
@@ -312,10 +328,11 @@ ${
 【检索到的相关内容】
 ${chunks.length > 0 ? chunkBlocks : "未检索到与问题直接相关的文章内容。"}
 
+${whitelistSection}
 【回答规则】
 1. 只基于上方检索片段回答，不要编造片段中没有的信息。
 2. 如果检索内容不足以回答，明确说明"我在检索到的站内内容里没找到"。
-3. 引用或推荐文章时给出标题和 slug，最多推荐 3 篇。
+${citeRule}
 4. 回答使用简洁 Markdown，不输出 HTML 标签。
 ${COMPANION_RAG_META_RULE}`;
 }
@@ -334,6 +351,20 @@ export interface RetrievedChunk {
     tags?: string;
     chunkIndex?: number;
   };
+}
+
+/** 检索片段中去重后的篇目，供提示词白名单与服务端校验 __RAG_META__ */
+export function listDistinctArticlesFromChunks(
+  chunks: RetrievedChunk[],
+): Array<{ slug: string; title: string }> {
+  const map = new Map<string, { slug: string; title: string }>();
+  for (const chunk of chunks) {
+    const slug = (chunk.metadata.slug || "").trim();
+    if (!slug || map.has(slug)) continue;
+    const title = (chunk.metadata.title || "").trim() || slug;
+    map.set(slug, { slug, title });
+  }
+  return [...map.values()];
 }
 
 export interface ParsedAssistantRagMeta {
@@ -401,7 +432,7 @@ export function parseAssistantRagMeta(
     return {
       displayText,
       ragUsed,
-      articles: articles.slice(0, 5),
+      articles,
       parseOk: true,
     };
   } catch {
@@ -414,34 +445,36 @@ export function parseAssistantRagMeta(
   }
 }
 
-export function buildRAGSystemPrompt(params: {
-  author: AuthorSummary;
-  chunks: RetrievedChunk[];
-  systemPersona: string;
-}): string {
-  const { author, chunks, systemPersona } = params;
+/** 解析 __RAG_META__ 后：用检索白名单收敛 sources，避免编造 slug */
+export function resolveRagSourcesForDoneEvent(
+  parsed: ParsedAssistantRagMeta,
+  whitelist: Array<{ slug: string; title: string }>,
+): {
+  sources: Array<{ slug: string; title: string }>;
+  ragUsedOut: boolean;
+} {
+  if (whitelist.length === 0) {
+    return { sources: [], ragUsedOut: false };
+  }
 
-  const chunkBlocks = chunks
-    .map((chunk, i) => {
-      const title = chunk.metadata.title || "未知文章";
-      const slug = chunk.metadata.slug || "";
-      return `--- 片段 ${i + 1}（来自《${title}》，slug: ${slug}）---\n${chunk.document}`;
-    })
-    .join("\n\n");
+  const allowed = new Map(whitelist.map((a) => [a.slug, a]));
+  const filtered: Array<{ slug: string; title: string }> = [];
+  const seen = new Set<string>();
+  for (const a of parsed.articles) {
+    const c = allowed.get(a.slug);
+    if (!c || seen.has(a.slug)) continue;
+    seen.add(a.slug);
+    filtered.push(c);
+  }
 
-  return `${systemPersona}
-  
-${COMPANION_RAG_META_REMINDER_OPEN}
-
-${formatAuthorPromptSection(author)}
-
-【检索到的相关内容】
-${chunks.length > 0 ? chunkBlocks : "未检索到与问题直接相关的文章内容。"}
-
-【回答规则】
-1. 优先基于上方"检索到的相关内容"回答，不要编造其中没有的信息。
-2. 如果检索内容不足以回答，明确说明"我在站内信息里没找到"，不要猜测。
-3. 引用或推荐文章时给出标题和 slug，最多推荐 3 篇。
-4. 回答使用简洁 Markdown，段落清晰，不输出 HTML 标签。
-${COMPANION_RAG_META_RULE}`;
+  if (!parsed.parseOk) {
+    return { sources: [...whitelist], ragUsedOut: false };
+  }
+  if (!parsed.ragUsed) {
+    return { sources: [], ragUsedOut: false };
+  }
+  return {
+    sources: filtered.length > 0 ? filtered : [...whitelist],
+    ragUsedOut: true,
+  };
 }
