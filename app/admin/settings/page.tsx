@@ -323,14 +323,20 @@ export default function SettingsPage() {
             </div>
           ) : (
             <AdminTableScroll>
-              <table className="w-full min-w-max text-sm">
+              <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   <tr>
-                    <th className="px-6 py-3 text-left">文章</th>
-                    <th className="px-6 py-3 text-left">状态</th>
-                    <th className="px-6 py-3 text-left">分块数</th>
+                    <th className="max-w-md px-6 py-3 text-left">文章</th>
+                    <th className="min-w-[5rem] whitespace-nowrap px-6 py-3 text-left">
+                      状态
+                    </th>
+                    <th className="min-w-16 whitespace-nowrap px-6 py-3 text-left">
+                      分块数
+                    </th>
                     <th className="px-6 py-3 text-left">索引更新</th>
-                    <th className="px-6 py-3 text-right">操作</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -339,32 +345,37 @@ export default function SettingsPage() {
                       key={post.postId}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                     >
-                      <td className="px-6 py-3">
-                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
+                      <td className="min-w-0 max-w-md overflow-hidden px-6 py-3 align-top">
+                        <p className="min-w-0 max-w-full truncate font-medium text-gray-900 dark:text-gray-100">
                           {post.title}
                         </p>
-                        <p className="text-xs text-gray-400">{post.slug}</p>
+                        <p className="min-w-0 max-w-full truncate text-xs text-gray-400">
+                          {post.slug}
+                        </p>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="min-w-[5rem] whitespace-nowrap px-6 py-3 align-top">
                         {post.indexed ? (
                           <Badge
                             variant="secondary"
-                            className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                            className="inline-flex shrink-0 whitespace-nowrap bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
                           >
                             已索引
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800"
+                            className="inline-flex shrink-0 whitespace-nowrap text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800"
                           >
                             未索引
                           </Badge>
                         )}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="min-w-16 whitespace-nowrap px-6 py-3 align-top tabular-nums">
                         {post.indexed ? (
-                          <Badge variant="secondary">
+                          <Badge
+                            variant="secondary"
+                            className="inline-flex shrink-0 whitespace-nowrap"
+                          >
                             {post.chunkCount} 块
                           </Badge>
                         ) : (
@@ -376,7 +387,7 @@ export default function SettingsPage() {
                           ? new Date(post.updatedAt).toLocaleString("zh-CN")
                           : "—"}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex justify-end gap-2">
                           {post.indexed ? (
                             <>

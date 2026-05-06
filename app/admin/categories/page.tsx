@@ -230,22 +230,29 @@ export default function CategoriesPage() {
             <div className="text-center py-16 text-gray-500">暂无分类</div>
           ) : (
             <AdminTableScroll>
-              <table className="w-full min-w-max">
+              <table className="w-full min-w-[750px] table-fixed">
+                <colgroup>
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                </colgroup>
                 <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase min-w-[10rem] w-[12%]">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       图标
                     </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       名称
                     </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       Slug
                     </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       文章数
                     </th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-right px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                       操作
                     </th>
                   </tr>
@@ -256,8 +263,7 @@ export default function CategoriesPage() {
                       key={cat.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                     >
-                      {/* 编辑时图标输入加宽 */}
-                      <td className="px-6 py-4 align-middle min-w-[10rem] w-[12%]">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         {editingId === cat.id ? (
                           <Input
                             value={editValues.icon}
@@ -267,7 +273,7 @@ export default function CategoriesPage() {
                                 icon: e.target.value,
                               })
                             }
-                            className="h-8 w-full min-w-[9rem] text-base"
+                            className="h-8 w-full min-w-0 text-base"
                             maxLength={50}
                             placeholder="🤖"
                             aria-label="分类图标"
@@ -281,7 +287,7 @@ export default function CategoriesPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         {editingId === cat.id ? (
                           <Input
                             value={editValues.name}
@@ -291,15 +297,15 @@ export default function CategoriesPage() {
                                 name: e.target.value,
                               })
                             }
-                            className="h-8"
+                            className="h-8 w-full min-w-0"
                           />
                         ) : (
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                          <span className="font-medium text-gray-900 dark:text-gray-100 break-words">
                             {cat.name}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         {editingId === cat.id ? (
                           <Input
                             value={editValues.slug}
@@ -309,21 +315,21 @@ export default function CategoriesPage() {
                                 slug: e.target.value,
                               })
                             }
-                            className="h-8 font-mono text-sm"
+                            className="h-8 w-full min-w-0 font-mono text-sm"
                           />
                         ) : (
-                          <span className="font-mono text-xs text-gray-400">
+                          <span className="font-mono text-xs text-gray-400 break-all">
                             {cat.slug}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         <span className="text-sm text-gray-500">
                           {cat.stats?.totalPosts ?? 0}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top whitespace-nowrap">
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
                           {editingId === cat.id ? (
                             <>
                               <Button

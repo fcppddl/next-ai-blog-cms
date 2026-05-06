@@ -74,7 +74,7 @@ function AdminPostTruncatedTitle({ title }: { title: string }) {
     <div
       ref={ref}
       className={cn(
-        "font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs",
+        "min-w-0 w-full max-w-full truncate font-medium text-gray-900 dark:text-gray-100",
         truncated && "cursor-default",
       )}
     >
@@ -87,7 +87,11 @@ function AdminPostTruncatedTitle({ title }: { title: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{line}</TooltipTrigger>
-      <TooltipContent side="top" sideOffset={8} className="max-w-md text-left">
+      <TooltipContent
+        side="top"
+        sideOffset={8}
+        className="max-w-none whitespace-nowrap text-left"
+      >
         {title}
       </TooltipContent>
     </Tooltip>
@@ -231,25 +235,25 @@ export default function PostsPage() {
               <div className="text-center py-16 text-gray-500">暂无文章</div>
             ) : (
               <AdminTableScroll>
-                <table className="w-full min-w-max">
+                <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                     <tr>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                      <th className="max-w-md text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
                         标题
                       </th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">
                         分类
                       </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                      <th className="min-w-[5rem] whitespace-nowrap text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
                         状态
                       </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                      <th className="min-w-16 whitespace-nowrap text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
                         浏览
                       </th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
                         日期
                       </th>
-                      <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                      <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap">
                         操作
                       </th>
                     </tr>
@@ -260,13 +264,13 @@ export default function PostsPage() {
                         key={post.id}
                         className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                       >
-                        <td className="px-6 py-4">
+                        <td className="min-w-0 max-w-md px-6 py-4 align-top overflow-hidden">
                           <AdminPostTruncatedTitle title={post.title} />
-                          <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-mono">
+                          <div className="mt-0.5 min-w-0 max-w-full truncate font-mono text-xs text-gray-500 dark:text-slate-400">
                             {post.slug}
                           </div>
                         </td>
-                        <td className="px-6 py-4 hidden md:table-cell">
+                        <td className="px-6 py-4 hidden md:table-cell align-middle">
                           {post.category ? (
                             <span
                               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xl leading-none dark:border-slate-600 dark:bg-slate-700/80"
@@ -286,21 +290,21 @@ export default function PostsPage() {
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="min-w-[5rem] whitespace-nowrap px-6 py-4 align-middle">
                           {post.published ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                            <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
                               已发布
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">
+                            <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">
                               草稿
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
+                        <td className="min-w-16 whitespace-nowrap px-6 py-4 hidden lg:table-cell align-middle text-sm text-gray-500 dark:text-slate-400 tabular-nums">
                           {post.views}
                         </td>
-                        <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
+                        <td className="px-6 py-4 hidden lg:table-cell align-middle text-sm text-gray-500 dark:text-slate-400">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
                             {new Date(post.updatedAt).toLocaleDateString(
@@ -308,7 +312,7 @@ export default function PostsPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-middle whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               size="sm"

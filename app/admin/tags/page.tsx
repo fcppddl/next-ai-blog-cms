@@ -169,19 +169,25 @@ export default function TagsPage() {
             <div className="text-center py-16 text-gray-500">暂无标签</div>
           ) : (
             <AdminTableScroll>
-              <table className="w-full min-w-max">
+              <table className="w-full min-w-[750px] table-fixed">
+                <colgroup>
+                  <col className="w-1/4" />
+                  <col className="w-1/4" />
+                  <col className="w-1/4" />
+                  <col className="w-1/4" />
+                </colgroup>
                 <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       名称
                     </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       Slug
                     </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
                       文章数
                     </th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                    <th className="text-right px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                       操作
                     </th>
                   </tr>
@@ -192,7 +198,7 @@ export default function TagsPage() {
                       key={tag.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         {editingId === tag.id ? (
                           <Input
                             value={editValues.name}
@@ -202,15 +208,15 @@ export default function TagsPage() {
                                 name: e.target.value,
                               })
                             }
-                            className="h-8"
+                            className="h-8 w-full min-w-0"
                           />
                         ) : (
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                          <span className="font-medium text-gray-900 dark:text-gray-100 break-words">
                             {tag.name}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         {editingId === tag.id ? (
                           <Input
                             value={editValues.slug}
@@ -220,21 +226,21 @@ export default function TagsPage() {
                                 slug: e.target.value,
                               })
                             }
-                            className="h-8 font-mono text-sm"
+                            className="h-8 w-full min-w-0 font-mono text-sm"
                           />
                         ) : (
-                          <span className="font-mono text-xs text-gray-400">
+                          <span className="font-mono text-xs text-gray-400 break-all">
                             {tag.slug}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
                         <span className="text-sm text-gray-500">
                           {tag.stats?.totalPosts ?? 0}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top whitespace-nowrap">
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
                           {editingId === tag.id ? (
                             <>
                               <Button
