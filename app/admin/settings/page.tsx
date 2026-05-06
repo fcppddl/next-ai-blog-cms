@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import AdminLayout from "@/components/admin/admin-layout";
+import { AdminTableScroll } from "@/components/admin/admin-table-scroll";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -321,61 +322,99 @@ export default function SettingsPage() {
               暂无已发布文章
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                <tr>
-                  <th className="px-6 py-3 text-left">文章</th>
-                  <th className="px-6 py-3 text-left">状态</th>
-                  <th className="px-6 py-3 text-left">分块数</th>
-                  <th className="px-6 py-3 text-left">索引更新</th>
-                  <th className="px-6 py-3 text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {status.posts.map((post) => (
-                  <tr
-                    key={post.postId}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                  >
-                    <td className="px-6 py-3">
-                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
-                        {post.title}
-                      </p>
-                      <p className="text-xs text-gray-400">{post.slug}</p>
-                    </td>
-                    <td className="px-6 py-3">
-                      {post.indexed ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                        >
-                          已索引
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800"
-                        >
-                          未索引
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-6 py-3">
-                      {post.indexed ? (
-                        <Badge variant="secondary">{post.chunkCount} 块</Badge>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-3 text-gray-500 dark:text-gray-400 text-xs">
-                      {post.updatedAt
-                        ? new Date(post.updatedAt).toLocaleString("zh-CN")
-                        : "—"}
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex justify-end gap-2">
+            <AdminTableScroll>
+              <table className="w-full min-w-max text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <tr>
+                    <th className="px-6 py-3 text-left">文章</th>
+                    <th className="px-6 py-3 text-left">状态</th>
+                    <th className="px-6 py-3 text-left">分块数</th>
+                    <th className="px-6 py-3 text-left">索引更新</th>
+                    <th className="px-6 py-3 text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {status.posts.map((post) => (
+                    <tr
+                      key={post.postId}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                    >
+                      <td className="px-6 py-3">
+                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
+                          {post.title}
+                        </p>
+                        <p className="text-xs text-gray-400">{post.slug}</p>
+                      </td>
+                      <td className="px-6 py-3">
                         {post.indexed ? (
-                          <>
+                          <Badge
+                            variant="secondary"
+                            className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                          >
+                            已索引
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800"
+                          >
+                            未索引
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-6 py-3">
+                        {post.indexed ? (
+                          <Badge variant="secondary">
+                            {post.chunkCount} 块
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                        {post.updatedAt
+                          ? new Date(post.updatedAt).toLocaleString("zh-CN")
+                          : "—"}
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex justify-end gap-2">
+                          {post.indexed ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleIndexPost(post.postId)}
+                                disabled={!!postActions[post.postId]}
+                                className="gap-1 h-7 text-xs"
+                              >
+                                {postActions[post.postId] ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3" />
+                                )}
+                                重建
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setPendingDelete({
+                                    postId: post.postId,
+                                    title: post.title,
+                                  })
+                                }
+                                disabled={!!postActions[`del_${post.postId}`]}
+                                className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
+                              >
+                                {postActions[`del_${post.postId}`] ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                                删除
+                              </Button>
+                            </>
+                          ) : (
                             <Button
                               size="sm"
                               variant="outline"
@@ -386,52 +425,18 @@ export default function SettingsPage() {
                               {postActions[post.postId] ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                <RefreshCw className="h-3 w-3" />
+                                <PlusCircle className="h-3 w-3" />
                               )}
-                              重建
+                              建立索引
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                setPendingDelete({
-                                  postId: post.postId,
-                                  title: post.title,
-                                })
-                              }
-                              disabled={!!postActions[`del_${post.postId}`]}
-                              className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
-                            >
-                              {postActions[`del_${post.postId}`] ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3 w-3" />
-                              )}
-                              删除
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleIndexPost(post.postId)}
-                            disabled={!!postActions[post.postId]}
-                            className="gap-1 h-7 text-xs"
-                          >
-                            {postActions[post.postId] ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <PlusCircle className="h-3 w-3" />
-                            )}
-                            建立索引
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </AdminTableScroll>
           )}
         </div>
 

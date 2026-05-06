@@ -184,7 +184,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <aside
           className={cn(
             "fixed left-0 top-16 h-[calc(100vh-4rem)] w-56 bg-white dark:bg-[#080d18] border-r border-gray-100 dark:border-slate-800/80 transform transition-transform duration-200 ease-in-out z-40",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+            sidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full lg:translate-x-0",
           )}
         >
           <nav className="flex-1 px-3 py-6 space-y-1">
@@ -235,8 +237,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         )}
 
         {/* Main */}
-        <main className="lg:ml-56 mt-16 min-h-[calc(100vh-4rem)]">
-          <div className="p-6">{children}</div>
+        <main className="lg:ml-56 mt-16 min-h-[calc(100vh-4rem)] min-w-0">
+          <div className="p-6 min-w-0 max-w-full">{children}</div>
         </main>
       </div>
     </TooltipProvider>
