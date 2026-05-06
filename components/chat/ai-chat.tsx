@@ -5,6 +5,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -71,6 +72,14 @@ const MAX_STORED = 20;
 const MAX_HISTORY_SEND = 80;
 const FLUSH_INTERVAL_MS = 30;
 const FLUSH_MIN_CHARS = 20;
+/** 距底部小于此像素视为「仍在跟随最新消息」，流式输出时才自动滚动 */
+const SCROLL_BOTTOM_THRESHOLD_PX = 64;
+
+function isNearBottom(el: HTMLDivElement): boolean {
+  return (
+    el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_BOTTOM_THRESHOLD_PX
+  );
+}
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -253,6 +262,8 @@ export default function AIChatWidget() {
   const messagesRef = useRef<ChatMessage[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  /** 用户是否在底部附近（未向上翻阅）；仅在为 true 时随新内容滚动 */
+  const stickToBottomRef = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const chunkBufRef = useRef("");
@@ -299,13 +310,18 @@ export default function AIChatWidget() {
     }
   }, [messages]);
 
-  // Auto-scroll
-  useEffect(() => {
+  const onMessagesScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    stickToBottomRef.current = isNearBottom(el);
+  }, []);
+
+  // 仅在用户未向上翻阅时跟随滚到底（含流式逐字更新）
+  useLayoutEffect(() => {
     if (!open) return;
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    const el = scrollRef.current;
+    if (!el || !stickToBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages, open]);
 
   // Cleanup
@@ -409,6 +425,7 @@ export default function AIChatWidget() {
 
     const userId = genId();
     const asstId = genId();
+    stickToBottomRef.current = true;
     setMessages((prev) => [
       ...prev,
       { id: userId, role: "user", content },
@@ -649,6 +666,7 @@ export default function AIChatWidget() {
           {/* Messages */}
           <div
             ref={scrollRef}
+            onScroll={onMessagesScroll}
             className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0"
           >
             {messages.length === 0 && (
