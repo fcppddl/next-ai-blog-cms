@@ -169,7 +169,15 @@ class MdBoundary extends Component<
 function MsgMarkdown({ content }: { content: string }) {
   return (
     <MdBoundary content={content}>
-      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-pre:my-2 prose-code:before:content-none prose-code:after:content-none">
+      <div
+        className={
+          "post-md-content prose prose-sm prose-gray dark:prose-invert max-w-none " +
+          "prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-pre:my-2 " +
+          "prose-li:mb-2 prose-li:text-foreground " +
+          "prose-ul:list-disc [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square] " +
+          "prose-code:before:content-none prose-code:after:content-none"
+        }
+      >
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </MdBoundary>
