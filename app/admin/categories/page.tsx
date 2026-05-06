@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/admin-layout";
+import { AdminTableScroll } from "@/components/admin/admin-table-scroll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -228,150 +229,161 @@ export default function CategoriesPage() {
           ) : categories.length === 0 ? (
             <div className="text-center py-16 text-gray-500">暂无分类</div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase min-w-[10rem] w-[12%]">
-                    图标
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
-                    名称
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
-                    Slug
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">
-                    文章数
-                  </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {categories.map((cat) => (
-                  <tr
-                    key={cat.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  >
-                    {/* 编辑时图标输入加宽 */}
-                    <td className="px-6 py-4 align-middle min-w-[10rem] w-[12%]">
-                      {editingId === cat.id ? (
-                        <Input
-                          value={editValues.icon}
-                          onChange={(e) =>
-                            setEditValues({
-                              ...editValues,
-                              icon: e.target.value,
-                            })
-                          }
-                          className="h-8 w-full min-w-[9rem] text-base"
-                          maxLength={50}
-                          placeholder="🤖"
-                          aria-label="分类图标"
-                        />
-                      ) : (
-                        <span
-                          className="text-xl leading-none"
-                          title={cat.icon?.trim() || undefined}
-                        >
-                          {cat.icon?.trim() ? cat.icon : "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === cat.id ? (
-                        <Input
-                          value={editValues.name}
-                          onChange={(e) =>
-                            setEditValues({
-                              ...editValues,
-                              name: e.target.value,
-                            })
-                          }
-                          className="h-8"
-                        />
-                      ) : (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {cat.name}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      {editingId === cat.id ? (
-                        <Input
-                          value={editValues.slug}
-                          onChange={(e) =>
-                            setEditValues({
-                              ...editValues,
-                              slug: e.target.value,
-                            })
-                          }
-                          className="h-8 font-mono text-sm"
-                        />
-                      ) : (
-                        <span className="font-mono text-xs text-gray-400">
-                          {cat.slug}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">
-                        {cat.stats?.totalPosts ?? 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {editingId === cat.id ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-green-600"
-                              onClick={() => handleUpdate(cat.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => setEditingId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1 h-7 text-xs"
-                              onClick={() => startEdit(cat)}
-                            >
-                              <Edit className="h-3 w-3" />
-                              编辑
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
-                              onClick={() =>
-                                setPendingDelete({ id: cat.id, name: cat.name })
-                              }
-                              disabled={deletingId === cat.id}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              删除
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+            <AdminTableScroll>
+              <table className="w-full min-w-[750px] table-fixed">
+                <colgroup>
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                  <col className="w-1/5" />
+                </colgroup>
+                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                      图标
+                    </th>
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                      名称
+                    </th>
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                      Slug
+                    </th>
+                    <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                      文章数
+                    </th>
+                    <th className="text-right px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                      操作
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {categories.map((cat) => (
+                    <tr
+                      key={cat.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
+                        {editingId === cat.id ? (
+                          <Input
+                            value={editValues.icon}
+                            onChange={(e) =>
+                              setEditValues({
+                                ...editValues,
+                                icon: e.target.value,
+                              })
+                            }
+                            className="h-8 w-full min-w-0 text-base"
+                            maxLength={50}
+                            placeholder="🤖"
+                            aria-label="分类图标"
+                          />
+                        ) : (
+                          <span
+                            className="text-xl leading-none"
+                            title={cat.icon?.trim() || undefined}
+                          >
+                            {cat.icon?.trim() ? cat.icon : "—"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
+                        {editingId === cat.id ? (
+                          <Input
+                            value={editValues.name}
+                            onChange={(e) =>
+                              setEditValues({
+                                ...editValues,
+                                name: e.target.value,
+                              })
+                            }
+                            className="h-8 w-full min-w-0"
+                          />
+                        ) : (
+                          <span className="font-medium text-gray-900 dark:text-gray-100 break-words">
+                            {cat.name}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
+                        {editingId === cat.id ? (
+                          <Input
+                            value={editValues.slug}
+                            onChange={(e) =>
+                              setEditValues({
+                                ...editValues,
+                                slug: e.target.value,
+                              })
+                            }
+                            className="h-8 w-full min-w-0 font-mono text-sm"
+                          />
+                        ) : (
+                          <span className="font-mono text-xs text-gray-400 break-all">
+                            {cat.slug}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top">
+                        <span className="text-sm text-gray-500">
+                          {cat.stats?.totalPosts ?? 0}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 min-w-0 align-top whitespace-nowrap">
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
+                          {editingId === cat.id ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-green-600"
+                                onClick={() => handleUpdate(cat.id)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setEditingId(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 h-7 text-xs"
+                                onClick={() => startEdit(cat)}
+                              >
+                                <Edit className="h-3 w-3" />
+                                编辑
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
+                                onClick={() =>
+                                  setPendingDelete({
+                                    id: cat.id,
+                                    name: cat.name,
+                                  })
+                                }
+                                disabled={deletingId === cat.id}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                删除
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </AdminTableScroll>
           )}
         </div>
 
@@ -390,7 +402,8 @@ export default function CategoriesPage() {
                 <div className="space-y-1.5 pt-0.5">
                   <DialogTitle>删除分类</DialogTitle>
                   <DialogDescription className="text-left">
-                    确认删除分类「{pendingDelete?.name ?? ""}」？此操作不可恢复。
+                    确认删除分类「{pendingDelete?.name ?? ""}
+                    」？此操作不可恢复。
                   </DialogDescription>
                 </div>
               </div>

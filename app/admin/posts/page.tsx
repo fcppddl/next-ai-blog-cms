@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import AdminLayout from "@/components/admin/admin-layout";
+import { AdminTableScroll } from "@/components/admin/admin-table-scroll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleLoading } from "@/components/ui/loading";
@@ -73,7 +74,7 @@ function AdminPostTruncatedTitle({ title }: { title: string }) {
     <div
       ref={ref}
       className={cn(
-        "font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs",
+        "min-w-0 w-full max-w-full truncate font-medium text-gray-900 dark:text-gray-100",
         truncated && "cursor-default",
       )}
     >
@@ -86,7 +87,11 @@ function AdminPostTruncatedTitle({ title }: { title: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{line}</TooltipTrigger>
-      <TooltipContent side="top" sideOffset={8} className="max-w-md text-left">
+      <TooltipContent
+        side="top"
+        sideOffset={8}
+        className="max-w-none whitespace-nowrap text-left"
+      >
         {title}
       </TooltipContent>
     </Tooltip>
@@ -168,253 +173,262 @@ export default function PostsPage() {
   return (
     <AdminLayout>
       <TooltipProvider delayDuration={0}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              文章管理
-            </h1>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-1 h-5 bg-indigo-600 dark:bg-violet-600 rounded-full" />
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                文章管理
+              </h1>
+            </div>
+            <Link href="/admin/posts/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                新建文章
+              </Button>
+            </Link>
           </div>
-          <Link href="/admin/posts/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              新建文章
-            </Button>
-          </Link>
-        </div>
 
-        {/* Filters */}
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
-            <Input
-              placeholder="搜索文章..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
+          {/* Filters */}
+          <div className="flex gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
+              <Input
+                placeholder="搜索文章..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 dark:bg-gray-800/80 dark:border-slate-700 dark:text-gray-100 dark:placeholder:text-slate-500"
+              />
+            </div>
+            <Select
+              value={status}
+              onValueChange={(v) => {
+                setStatus(v);
                 setPage(1);
               }}
-              className="pl-9 dark:bg-gray-800/80 dark:border-slate-700 dark:text-gray-100 dark:placeholder:text-slate-500"
-            />
+            >
+              <SelectTrigger className="h-10 min-w-[8rem] shrink-0 cursor-pointer border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="cursor-pointer">
+                  全部
+                </SelectItem>
+                <SelectItem value="published" className="cursor-pointer">
+                  已发布
+                </SelectItem>
+                <SelectItem value="draft" className="cursor-pointer">
+                  草稿
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={status}
-            onValueChange={(v) => {
-              setStatus(v);
-              setPage(1);
+
+          {/* Table */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm dark:shadow-none">
+            {loading ? (
+              <SimpleLoading />
+            ) : posts.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">暂无文章</div>
+            ) : (
+              <AdminTableScroll>
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th className="max-w-md text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                        标题
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                        分类
+                      </th>
+                      <th className="min-w-[5rem] whitespace-nowrap text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
+                        状态
+                      </th>
+                      <th className="min-w-16 whitespace-nowrap text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                        浏览
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                        日期
+                      </th>
+                      <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                        操作
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {posts.map((post) => (
+                      <tr
+                        key={post.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                      >
+                        <td className="min-w-0 max-w-md px-6 py-4 align-top overflow-hidden">
+                          <AdminPostTruncatedTitle title={post.title} />
+                          <div className="mt-0.5 min-w-0 max-w-full truncate font-mono text-xs text-gray-500 dark:text-slate-400">
+                            {post.slug}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell align-middle">
+                          {post.category ? (
+                            <span
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xl leading-none dark:border-slate-600 dark:bg-slate-700/80"
+                              title={post.category.name}
+                              aria-label={`分类：${post.category.name}`}
+                            >
+                              {post.category.icon?.trim() ? (
+                                <span aria-hidden>
+                                  {post.category.icon.trim()}
+                                </span>
+                              ) : (
+                                <Folder
+                                  className="h-4 w-4 text-blue-700 dark:text-slate-200"
+                                  aria-hidden
+                                />
+                              )}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="min-w-[5rem] whitespace-nowrap px-6 py-4 align-middle">
+                          {post.published ? (
+                            <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                              已发布
+                            </span>
+                          ) : (
+                            <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">
+                              草稿
+                            </span>
+                          )}
+                        </td>
+                        <td className="min-w-16 whitespace-nowrap px-6 py-4 hidden lg:table-cell align-middle text-sm text-gray-500 dark:text-slate-400 tabular-nums">
+                          {post.views}
+                        </td>
+                        <td className="px-6 py-4 hidden lg:table-cell align-middle text-sm text-gray-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
+                            {new Date(post.updatedAt).toLocaleDateString(
+                              "zh-CN",
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs"
+                              onClick={() => togglePublish(post)}
+                              title={post.published ? "取消发布" : "发布"}
+                            >
+                              {post.published ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                              {post.published ? "下架" : "发布"}
+                            </Button>
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs"
+                            >
+                              <Link href={`/admin/posts/${post.id}/edit`}>
+                                <Edit className="h-3 w-3" />
+                                编辑
+                              </Link>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
+                              onClick={() =>
+                                setPendingDelete({
+                                  id: post.id,
+                                  title: post.title,
+                                })
+                              }
+                              disabled={deletingId === post.id}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              删除
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </AdminTableScroll>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2 p-4 border-t border-gray-100 dark:border-gray-700">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  上一页
+                </Button>
+                <span className="flex items-center text-sm text-gray-500 dark:text-slate-400">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  下一页
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Dialog
+            open={pendingDelete !== null}
+            onOpenChange={(open) => {
+              if (!open) setPendingDelete(null);
             }}
           >
-            <SelectTrigger className="h-10 min-w-[8rem] shrink-0 cursor-pointer border-gray-200 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-900/50 dark:text-gray-100">
-              <SelectValue placeholder="状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="cursor-pointer">
-                全部
-              </SelectItem>
-              <SelectItem value="published" className="cursor-pointer">
-                已发布
-              </SelectItem>
-              <SelectItem value="draft" className="cursor-pointer">
-                草稿
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm dark:shadow-none">
-          {loading ? (
-            <SimpleLoading />
-          ) : posts.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">暂无文章</div>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
-                    标题
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">
-                    分类
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
-                    状态
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
-                    浏览
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">
-                    日期
-                  </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-slate-500 uppercase tracking-wider">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {posts.map((post) => (
-                  <tr
-                    key={post.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <AdminPostTruncatedTitle title={post.title} />
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-mono">
-                        {post.slug}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      {post.category ? (
-                        <span
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xl leading-none dark:border-slate-600 dark:bg-slate-700/80"
-                          title={post.category.name}
-                          aria-label={`分类：${post.category.name}`}
-                        >
-                          {post.category.icon?.trim() ? (
-                            <span aria-hidden>{post.category.icon.trim()}</span>
-                          ) : (
-                            <Folder
-                              className="h-4 w-4 text-blue-700 dark:text-slate-200"
-                              aria-hidden
-                            />
-                          )}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-6 py-4">
-                      {post.published ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
-                          已发布
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-600">
-                          草稿
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
-                      {post.views}
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell text-sm text-gray-500 dark:text-slate-400">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 text-sky-600/80 dark:text-sky-400/80" />
-                        {new Date(post.updatedAt).toLocaleDateString("zh-CN")}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 h-7 text-xs"
-                          onClick={() => togglePublish(post)}
-                          title={post.published ? "取消发布" : "发布"}
-                        >
-                          {post.published ? (
-                            <EyeOff className="h-3 w-3" />
-                          ) : (
-                            <Eye className="h-3 w-3" />
-                          )}
-                          {post.published ? "下架" : "发布"}
-                        </Button>
-                        <Button
-                          asChild
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 h-7 text-xs"
-                        >
-                          <Link href={`/admin/posts/${post.id}/edit`}>
-                            <Edit className="h-3 w-3" />
-                            编辑
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 h-7 text-xs text-red-500 hover:text-red-600 hover:border-red-300"
-                          onClick={() =>
-                            setPendingDelete({ id: post.id, title: post.title })
-                          }
-                          disabled={deletingId === post.id}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 p-4 border-t border-gray-100 dark:border-gray-700">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                上一页
-              </Button>
-              <span className="flex items-center text-sm text-gray-500 dark:text-slate-400">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                下一页
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Dialog
-          open={pendingDelete !== null}
-          onOpenChange={(open) => {
-            if (!open) setPendingDelete(null);
-          }}
-        >
-          <DialogContent showCloseButton className="sm:max-w-md">
-            <DialogHeader>
-              <div className="flex items-start gap-3 sm:text-left">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
-                  <AlertTriangle className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="space-y-1.5 pt-0.5">
-                  <DialogTitle>删除文章</DialogTitle>
-                  <DialogDescription className="text-left">
-                    确认删除文章「{pendingDelete?.title ?? ""}
-                    」？此操作不可恢复。
-                  </DialogDescription>
+            <DialogContent showCloseButton className="sm:max-w-md">
+              <DialogHeader>
+                <div className="flex items-start gap-3 sm:text-left">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                    <AlertTriangle className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="space-y-1.5 pt-0.5">
+                    <DialogTitle>删除文章</DialogTitle>
+                    <DialogDescription className="text-left">
+                      确认删除文章「{pendingDelete?.title ?? ""}
+                      」？此操作不可恢复。
+                    </DialogDescription>
+                  </div>
                 </div>
-              </div>
-            </DialogHeader>
-            <DialogFooter className="gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPendingDelete(null)}
-              >
-                取消
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => void confirmDeletePost()}
-              >
-                删除
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+              </DialogHeader>
+              <DialogFooter className="gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPendingDelete(null)}
+                >
+                  取消
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => void confirmDeletePost()}
+                >
+                  删除
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </TooltipProvider>
     </AdminLayout>
   );
