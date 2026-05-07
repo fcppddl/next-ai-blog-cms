@@ -10,6 +10,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "码界网",
   description: "基于 Next.js + AI 的现代化博客系统",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({
