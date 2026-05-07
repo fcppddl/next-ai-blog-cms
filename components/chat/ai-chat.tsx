@@ -77,7 +77,8 @@ const SCROLL_BOTTOM_THRESHOLD_PX = 64;
 
 function isNearBottom(el: HTMLDivElement): boolean {
   return (
-    el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_BOTTOM_THRESHOLD_PX
+    el.scrollHeight - el.scrollTop - el.clientHeight <=
+    SCROLL_BOTTOM_THRESHOLD_PX
   );
 }
 
@@ -738,8 +739,8 @@ export default function AIChatWidget() {
                               <p className="text-[10px] text-muted-foreground mb-1.5 flex flex-wrap items-center gap-1.5">
                                 <span>参考来源</span>
                                 {msg.ragEnabled && (
-                                  <span className="rounded bg-muted px-1.5 py-px text-[9px] font-medium">
-                                    检索
+                                  <span className="rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 px-1.5 py-px text-[9px] font-medium">
+                                    文章检索
                                   </span>
                                 )}
                                 {msg.ragUsed && (
