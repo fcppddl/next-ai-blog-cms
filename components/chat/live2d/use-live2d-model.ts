@@ -2,6 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import type { UseLive2DModelOptions } from "./types";
+import type { Application, Ticker } from "pixi.js";
+import type { Live2DModel } from "pixi-live2d-display/cubism4";
+
+// Cubism 4 核心模型参数接口——trySetParam 需要访问 getParameters()
+interface Cubism4Parameters {
+  getIndexByName(name: string): number;
+  setValueByIndex(idx: number, value: number): void;
+}
+
+interface Cubism4CoreModel {
+  getParameters(): Cubism4Parameters;
+}
 
 // 常见模型参数名——头部和眼球跟踪
 const HEAD_PARAM_X = "ParamAngleX";
@@ -12,9 +24,11 @@ const EYE_PARAM_Y = "ParamEyeBallY";
 const MOUTH_PARAMS = ["ParamMouthOpenY", "ParamA"];
 
 // 尝试设置模型参数，参数名不存在则静默忽略
-function trySetParam(model: any, name: string, value: number): void {
+function trySetParam(model: Live2DModel, name: string, value: number): void {
   try {
-    const coreModel = model.internalModel?.coreModel;
+    const coreModel = model.internalModel?.coreModel as
+      | Cubism4CoreModel
+      | undefined;
     if (!coreModel) return;
     const params = coreModel.getParameters();
     const idx = params.getIndexByName(name);
@@ -32,7 +46,7 @@ let coreLoadPromise: Promise<void> | null = null;
 function loadCubismCore(): Promise<void> {
   if (coreLoadPromise) return coreLoadPromise;
   coreLoadPromise = new Promise<void>((resolve, reject) => {
-    if ((window as any).Live2DCubismCore) {
+    if ("Live2DCubismCore" in window) {
       resolve();
       return;
     }
@@ -41,8 +55,7 @@ function loadCubismCore(): Promise<void> {
     script.src =
       "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js";
     script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error("无法加载 Live2D Cubism Core"));
+    script.onerror = () => reject(new Error("无法加载 Live2D Cubism Core"));
     script.async = true;
     script.setAttribute("fetchpriority", "low");
     document.head.appendChild(script);
@@ -57,18 +70,27 @@ export function useLive2DModel({
   onReady,
   speaking = false,
 }: UseLive2DModelOptions) {
-  const appRef = useRef<any>(null);
-  const modelRef = useRef<any>(null);
+  const appRef = useRef<Application | null>(null);
+  const modelRef = useRef<Live2DModel | null>(null);
+  const tickerRef = useRef<Ticker | null>(null);
   const disposedRef = useRef(false);
   // 鼠标位置（用于视线跟踪的动画循环）
   const mouseRef = useRef({ x: 0, y: 0 });
   // 嘴巴动画相位
   const mouthPhaseRef = useRef(0);
-  // 用 ref 持有 speaking，避免 speaking 变化时重建整个模型
-  // React 19：不在 render 期间写入 ref，改在 effect 中同步
+  // 用 ref 持有 speaking/onTap/onReady，避免回调变化时重建整个模型
   const speakingRef = useRef(speaking);
+  const onTapRef = useRef(onTap);
+  const onReadyRef = useRef(onReady);
+  // 在 effect 中同步 ref（React 19 不在 render 期间写入 ref）
   useEffect(() => {
     speakingRef.current = speaking;
+  });
+  useEffect(() => {
+    onTapRef.current = onTap;
+  });
+  useEffect(() => {
+    onReadyRef.current = onReady;
   });
 
   // 鼠标移动追踪（独立 effect，不依赖模型初始化）
@@ -77,10 +99,8 @@ export function useLive2DModel({
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       // 映射到 -1..1 范围
-      mouseRef.current.x =
-        ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y =
-        ((e.clientY - rect.top) / rect.height) * 2 - 1;
+      mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
     };
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => window.removeEventListener("mousemove", handleMouseMove);
@@ -106,17 +126,19 @@ export function useLive2DModel({
         // 2. 动态导入（避免 SSR 时报错）
         const PIXI = await import("pixi.js");
 
-        // pixi-live2d-display 依赖 window.PIXI
-        (window as any).PIXI = PIXI;
+        // pixi-live2d-display 依赖 window.PIXI，挂载到全局
+        (window as unknown as Record<string, unknown>).PIXI = PIXI;
 
         // 使用 cubism4 子模块，避免主入口检查 Cubism 2 运行时（我们只加载了 Cubism 4）
-        const { Live2DModel } = await import("pixi-live2d-display/cubism4");
+        const { Live2DModel: Live2DModelClass } = await import(
+          "pixi-live2d-display/cubism4"
+        );
 
         if (disposed) return;
 
         // 3. 创建 PixiJS Application（透明背景）
         const app = new PIXI.Application({
-          view: canvasEl as any,
+          view: canvasEl,
           width: canvasEl.width,
           height: canvasEl.height,
           backgroundAlpha: 0,
@@ -132,8 +154,10 @@ export function useLive2DModel({
         }
 
         // 4. 加载模型
-        const model = await Live2DModel.from(modelPath, {
-          autoInteract: false, // 手动控制交互
+        // autoInteract 已在 v0.5.0 废弃，改用 autoHitTest + autoFocus
+        const model = await Live2DModelClass.from(modelPath, {
+          autoHitTest: false,
+          autoFocus: false,
         });
         modelRef.current = model;
 
@@ -165,7 +189,7 @@ export function useLive2DModel({
 
         // 6. 点击反馈——播放 Tap 动作
         model.on("pointertap", () => {
-          onTap?.();
+          onTapRef.current?.();
           // 尝试常见的 tap 动作名
           const tapMotions = ["tap_01", "tap", "Tap", "Touch_head"];
           for (const name of tapMotions) {
@@ -183,6 +207,7 @@ export function useLive2DModel({
 
         // 7. 启动动画循环——处理视线跟踪和嘴巴动画
         const ticker = new PIXI.Ticker();
+        tickerRef.current = ticker;
         ticker.add(() => {
           if (disposed) return;
 
@@ -218,11 +243,8 @@ export function useLive2DModel({
         });
         ticker.start();
 
-        // 保存 ticker 引用用于清理
-        (app as any).__ticker = ticker;
-
         // 通知父组件加载完成
-        onReady?.();
+        onReadyRef.current?.();
       } catch (err) {
         console.error("Live2D 初始化失败:", err);
         if (!disposed) {
@@ -241,9 +263,10 @@ export function useLive2DModel({
       disposed = true;
       disposedRef.current = true;
 
-      // 停止 ticker
-      if (appRef.current?.__ticker) {
-        appRef.current.__ticker.destroy();
+      // 停止并销毁 ticker
+      if (tickerRef.current) {
+        tickerRef.current.destroy();
+        tickerRef.current = null;
       }
 
       // 销毁模型
@@ -269,7 +292,6 @@ export function useLive2DModel({
         appRef.current = null;
       }
     };
-    // 仅依赖 canvas 和 modelPath，回调通过 ?. 调用不受闭包影响
-    // speaking 通过 ref 读取最新值
+    // 仅依赖 canvas 和 modelPath，回调/状态通过 ref 读取最新值，避免不必要的重建
   }, [canvas, modelPath]);
 }
