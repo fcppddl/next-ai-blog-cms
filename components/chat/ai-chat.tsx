@@ -622,7 +622,10 @@ export default function AIChatWidget() {
         ];
 
   return (
-    <div className="fixed right-4 bottom-5 z-[70] flex flex-col items-end gap-3">
+    <div
+      className="fixed right-4 bottom-5 z-[70] flex flex-col items-end gap-3"
+      style={{ transform: "translate(-15px, -15px)" }}
+    >
       {/* Chat panel */}
       {open && (
         <div className="w-[min(92vw,400px)] h-[min(78vh,650px)] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden">
@@ -823,10 +826,6 @@ export default function AIChatWidget() {
         className="group relative cursor-pointer"
         aria-label={open ? "收起 AI 助手" : "打开 AI 助手"}
       >
-        {/* 背景光晕（仅在关闭时显示，打开时 X 按钮不需要） */}
-        {!open && (
-          <span className="absolute -inset-2 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 opacity-30 blur-md transition-all duration-300 group-hover:opacity-60 group-hover:blur-xl group-hover:-inset-3" />
-        )}
         {open ? (
           /* 打开状态——显示 X 关闭按钮 */
           <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 shadow-lg ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
@@ -837,7 +836,7 @@ export default function AIChatWidget() {
           /* 关闭状态——Live2D 角色（自带加载/回退状态） */
           <span className="relative block">
             <Live2DBot
-              modelPath="/live2d/haru/haru.model3.json"
+              modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json"
               streaming={streaming}
               onToggle={() => setOpen((p) => !p)}
             />

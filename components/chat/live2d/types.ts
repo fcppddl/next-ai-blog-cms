@@ -6,6 +6,8 @@ export interface Live2DBotProps {
   streaming?: boolean;
   /** 点击角色时触发（打开/关闭聊天面板） */
   onToggle?: () => void;
+  /** 模型加载就绪回调——父组件可用于隐藏加载态光晕 */
+  onReady?: () => void;
 }
 
 // 内部状态

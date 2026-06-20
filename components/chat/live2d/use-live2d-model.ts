@@ -8,7 +8,8 @@ const HEAD_PARAM_X = "ParamAngleX";
 const HEAD_PARAM_Y = "ParamAngleY";
 const EYE_PARAM_X = "ParamEyeBallX";
 const EYE_PARAM_Y = "ParamEyeBallY";
-const MOUTH_PARAM = "ParamMouthOpenY";
+// 嘴巴参数：优先 ParamMouthOpenY（标准），回退 ParamA（日式口型）
+const MOUTH_PARAMS = ["ParamMouthOpenY", "ParamA"];
 
 // 尝试设置模型参数，参数名不存在则静默忽略
 function trySetParam(model: any, name: string, value: number): void {
@@ -64,8 +65,11 @@ export function useLive2DModel({
   // 嘴巴动画相位
   const mouthPhaseRef = useRef(0);
   // 用 ref 持有 speaking，避免 speaking 变化时重建整个模型
+  // React 19：不在 render 期间写入 ref，改在 effect 中同步
   const speakingRef = useRef(speaking);
-  speakingRef.current = speaking;
+  useEffect(() => {
+    speakingRef.current = speaking;
+  });
 
   // 鼠标移动追踪（独立 effect，不依赖模型初始化）
   useEffect(() => {
@@ -105,7 +109,8 @@ export function useLive2DModel({
         // pixi-live2d-display 依赖 window.PIXI
         (window as any).PIXI = PIXI;
 
-        const { Live2DModel } = await import("pixi-live2d-display");
+        // 使用 cubism4 子模块，避免主入口检查 Cubism 2 运行时（我们只加载了 Cubism 4）
+        const { Live2DModel } = await import("pixi-live2d-display/cubism4");
 
         if (disposed) return;
 
@@ -137,19 +142,23 @@ export function useLive2DModel({
           return;
         }
 
-        // 5. 定位模型——居中
-        model.anchor.set(0.5, 0.5);
-        model.position.set(canvasEl.width / 2, canvasEl.height / 2);
+        // 5. 定位模型
+        // canvasEl.width/height 是物理像素（含 DPR），PixiJS autoDensity 用 CSS 像素坐标系
+        // 所以坐标和缩放都必须除以 DPR
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvasEl.width / dpr;
+        const cssH = canvasEl.height / dpr;
 
-        // 缩放适配 canvas
+        model.anchor.set(0.5, 0.5);
+        // 模型中心放在画布上半部分，让头部落在 56×56 圆形区域内
+        model.position.set(cssW / 2, cssH * 0.35);
+
         const modelWidth = model.width;
         const modelHeight = model.height;
         if (modelWidth > 0 && modelHeight > 0) {
-          const scale = Math.min(
-            canvasEl.width / modelWidth,
-            canvasEl.height / modelHeight,
-          );
-          model.scale.set(scale * 0.85);
+          // 按宽度缩放——确保头部在圆形区域内足够大
+          const scale = cssW / modelWidth;
+          model.scale.set(scale * 0.7);
         }
 
         app.stage.addChild(model);
@@ -188,15 +197,20 @@ export function useLive2DModel({
             trySetParam(model, EYE_PARAM_Y, my * 0.8);
 
             // 说话状态——嘴巴正弦开合（通过 ref 读取最新值）
+            // 尝试多个嘴巴参数名以兼容不同模型（ParamMouthOpenY / ParamA）
             if (speakingRef.current) {
               mouthPhaseRef.current += 0.15;
               const mouthValue =
                 Math.abs(Math.sin(mouthPhaseRef.current)) * 0.7;
-              trySetParam(model, MOUTH_PARAM, mouthValue);
+              for (const name of MOUTH_PARAMS) {
+                trySetParam(model, name, mouthValue);
+              }
             } else {
               // 不说话时缓慢回正嘴巴
               mouthPhaseRef.current = 0;
-              trySetParam(model, MOUTH_PARAM, 0);
+              for (const name of MOUTH_PARAMS) {
+                trySetParam(model, name, 0);
+              }
             }
           } catch {
             // 动画循环中的错误不应中断渲染
