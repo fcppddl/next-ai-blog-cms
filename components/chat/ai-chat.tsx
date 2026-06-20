@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { KnowledgeRouteHint } from "@/lib/ai/knowledge-route-hint";
+import Live2DBot from "@/components/chat/live2d-bot";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -621,7 +622,10 @@ export default function AIChatWidget() {
         ];
 
   return (
-    <div className="fixed right-4 bottom-5 z-[70] flex flex-col items-end gap-3">
+    <div
+      className="fixed right-4 bottom-5 z-[70] flex flex-col items-end gap-3"
+      style={{ transform: "translate(-15px, -15px)" }}
+    >
       {/* Chat panel */}
       {open && (
         <div className="w-[min(92vw,400px)] h-[min(78vh,650px)] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden">
@@ -815,27 +819,35 @@ export default function AIChatWidget() {
         </div>
       )}
 
-      {/* FAB */}
+      {/* FAB —— Live2D 角色（关闭时）/ 关闭按钮（打开时） */}
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
         className="group relative cursor-pointer"
         aria-label={open ? "收起 AI 助手" : "打开 AI 助手"}
       >
-        <span className="absolute -inset-2 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 opacity-30 blur-md transition-all duration-300 group-hover:opacity-60 group-hover:blur-xl group-hover:-inset-3" />
-        <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 shadow-lg ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
-          <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.12),transparent_60%)]" />
-          {open ? (
+        {open ? (
+          /* 打开状态——显示 X 关闭按钮 */
+          <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 shadow-lg ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
+            <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.12),transparent_60%)]" />
             <X className="relative h-5 w-5 text-white/90" />
-          ) : (
-            <Bot className="relative h-6 w-6 text-white" />
-          )}
-          {streaming && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-400 ring-2 ring-background">
-              <Loader2 className="h-2.5 w-2.5 animate-spin text-white" />
-            </span>
-          )}
-        </span>
+          </span>
+        ) : (
+          /* 关闭状态——Live2D 角色（自带加载/回退状态） */
+          <span className="relative block">
+            <Live2DBot
+              modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json"
+              streaming={streaming}
+              onToggle={() => setOpen((p) => !p)}
+            />
+          </span>
+        )}
+        {/* 流式回答中指示器 */}
+        {streaming && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-400 ring-2 ring-background z-10">
+            <Loader2 className="h-2.5 w-2.5 animate-spin text-white" />
+          </span>
+        )}
       </button>
     </div>
   );

@@ -53,6 +53,8 @@
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "openai": "^6.33.0",
+    "pixi-live2d-display": "^0.5.0-beta",
+    "pixi.js": "^7.3.3",
     "prisma": "^6.19.2",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
