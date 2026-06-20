@@ -27,10 +27,14 @@ const Live2DCanvas = dynamic(() => import("./live2d/live2d-canvas"), {
 // ─── 移动端检测 ────────────────────────────────────────────────────────────
 
 function useIsMobile(): boolean {
-  const [mobile, setMobile] = useState(false);
+  // 惰性初始化——在 useState 中同步读取当前值，避免 effect 中同步 setState
+  const [mobile, setMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 768px)").matches;
+  });
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 768px)");
-    setMobile(mql.matches);
+    // 只订阅变更，初始值已在 useState 中设置
     const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
