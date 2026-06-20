@@ -46,6 +46,12 @@ next-env.d.ts
 
 /app/generated/prisma
 
+# Live2D model files (large binaries, download manually)
+public/live2d/cubismcore/*
+!public/live2d/cubismcore/.gitkeep
+public/live2d/haru/*
+!public/live2d/haru/.gitkeep
+
 # Database
 *.db
 *.db-journal
