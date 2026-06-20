@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import AIChatWidget from "@/components/chat/ai-chat";
+import SiteFooter from "@/components/layout/site-footer";
 
 const navLinks = [{ href: "/about", ariaLabel: "关于" }];
 
@@ -123,35 +124,7 @@ export default function PublicLayout({
         <main className="relative z-10 flex-1 pt-16">{children}</main>
 
         {/* Footer */}
-        <footer className="relative z-10 border-t border-border py-5">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 text-center text-sm text-muted-foreground">
-            <span>© {new Date().getFullYear()} 码界网版权所有</span>
-            <a
-              href="https://beian.mps.gov.cn/#/query/webSearch?code=36100202000724"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 underline-offset-4 hover:text-foreground hover:underline"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/beian-police.png"
-                alt=""
-                width={20}
-                height={20}
-                className="shrink-0 align-middle"
-              />
-              赣公网安备36100202000724号
-            </a>
-            <a
-              href="https://beian.miit.gov.cn/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              赣ICP备2026008599号-1
-            </a>
-          </div>
-        </footer>
+        <SiteFooter />
 
         {/* AI Chat Assistant */}
         <AIChatWidget />
