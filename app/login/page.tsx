@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import SiteFooter from "@/components/layout/site-footer";
 
 interface LoginFormData {
   username: string;
@@ -66,123 +67,126 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/35 to-background py-12 px-4 relative overflow-hidden">
-      {/* 登录页：语义化背景/装饰 + 主题切换，避免黑夜模式仍强制浅色底 */}
-      <div className="fixed right-4 top-4 z-20">
-        <ThemeToggle />
-      </div>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/15 to-transparent rounded-full blur-3xl dark:from-primary/25" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-muted-foreground/10 to-transparent rounded-full blur-3xl dark:from-muted-foreground/15" />
-      </div>
-      {/* AIGC END */}
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-muted/35 to-background">
+      {/* 登录卡片区域：flex-1 撑开，居中显示 */}
+      <div className="flex-1 flex items-center justify-center py-12 px-4 relative overflow-hidden">
+        {/* 主题切换 */}
+        <div className="fixed right-4 top-4 z-20">
+          <ThemeToggle />
+        </div>
+        {/* 装饰背景 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/15 to-transparent rounded-full blur-3xl dark:from-primary/25" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-muted-foreground/10 to-transparent rounded-full blur-3xl dark:from-muted-foreground/15" />
+        </div>
+        {/* AIGC END */}
 
-      <div className="w-full max-w-md relative z-10 animate-scale-in">
-        <Card className="shadow-2xl border border-border/60 backdrop-blur-xl bg-card/85">
-          <CardHeader className="space-y-6 pb-8 pt-12">
-            <div className="flex items-center justify-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-gray-900 to-gray-700 rounded-3xl flex items-center justify-center shadow-lg">
-                <LogIn className="w-10 h-10 text-white" strokeWidth={1.5} />
+        <div className="w-full max-w-md relative z-10 animate-scale-in">
+          <Card className="shadow-2xl border border-border/60 backdrop-blur-xl bg-card/85">
+            <CardHeader className="space-y-6 pb-8 pt-12">
+              <div className="flex items-center justify-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-900 to-gray-700 rounded-3xl flex items-center justify-center shadow-lg">
+                  <LogIn className="w-10 h-10 text-white" strokeWidth={1.5} />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold text-center tracking-tight">
-                AI 博客管理系统
-              </CardTitle>
-              <CardDescription className="text-center text-base">
-                请使用管理员账户登录
-              </CardDescription>
-            </div>
-          </CardHeader>
+              <div className="space-y-2">
+                <CardTitle className="text-3xl font-bold text-center tracking-tight">
+                  码界网
+                </CardTitle>
+                <CardDescription className="text-center text-base">
+                  请使用管理员账户登录
+                </CardDescription>
+              </div>
+            </CardHeader>
 
-          <CardContent className="pb-12">
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <CardContent className="pb-12">
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(handleSubmit)}
-                className="space-y-5"
-              >
-                <FormField
-                  control={form.control}
-                  name="username"
-                  rules={{
-                    required: "请输入用户名",
-                    minLength: { value: 2, message: "用户名至少2个字符" },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>用户名</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="请输入用户名"
-                          autoComplete="username"
-                          disabled={isLoading}
-                          className="h-12"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  rules={{
-                    required: "请输入密码",
-                    minLength: { value: 4, message: "密码至少4个字符" },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>密码</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="请输入密码"
-                          autoComplete="current-password"
-                          disabled={isLoading}
-                          className="h-12"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base font-medium mt-8"
-                  disabled={isLoading}
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(handleSubmit)}
+                  className="space-y-5"
                 >
-                  {isLoading ? (
-                    <>
-                      <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      登录中...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-5 w-5" strokeWidth={2} />
-                      登录
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    rules={{
+                      required: "请输入用户名",
+                      minLength: { value: 2, message: "用户名至少2个字符" },
+                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>用户名</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="请输入用户名"
+                            autoComplete="username"
+                            disabled={isLoading}
+                            className="h-12"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} AI 博客管理系统. All rights reserved.
-        </p>
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    rules={{
+                      required: "请输入密码",
+                      minLength: { value: 4, message: "密码至少4个字符" },
+                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>密码</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="请输入密码"
+                            autoComplete="current-password"
+                            disabled={isLoading}
+                            className="h-12"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-medium mt-8"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        登录中...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="mr-2 h-5 w-5" strokeWidth={2} />
+                        登录
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer — 底部备案信息，与首页一致 */}
+      <SiteFooter />
     </div>
   );
 }
