@@ -36,7 +36,9 @@ function loadCubismCore(): Promise<void> {
       return;
     }
     const script = document.createElement("script");
-    script.src = "/live2d/cubismcore/live2dcubismcore.min.js";
+    // 使用 Live2D 官方 CDN，无需手动下载 Cubism Core
+    script.src =
+      "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js";
     script.onload = () => resolve();
     script.onerror = () =>
       reject(new Error("无法加载 Live2D Cubism Core"));
