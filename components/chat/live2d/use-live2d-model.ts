@@ -57,7 +57,7 @@ function loadCubismCore(): Promise<void> {
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("无法加载 Live2D Cubism Core"));
     script.async = true;
-    script.setAttribute("fetchpriority", "low");
+    script.setAttribute("fetchpriority", "high");
     document.head.appendChild(script);
   });
   return coreLoadPromise;
@@ -130,9 +130,8 @@ export function useLive2DModel({
         (window as unknown as Record<string, unknown>).PIXI = PIXI;
 
         // 使用 cubism4 子模块，避免主入口检查 Cubism 2 运行时（我们只加载了 Cubism 4）
-        const { Live2DModel: Live2DModelClass } = await import(
-          "pixi-live2d-display/cubism4"
-        );
+        const { Live2DModel: Live2DModelClass } =
+          await import("pixi-live2d-display/cubism4");
 
         if (disposed) return;
 

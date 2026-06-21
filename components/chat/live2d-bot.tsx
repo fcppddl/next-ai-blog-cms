@@ -11,8 +11,8 @@ import type { Live2DBotProps } from "./live2d/types";
 const CANVAS_WIDTH = 100;
 const CANVAS_HEIGHT = 125;
 
-/** 延迟加载——等浏览器空闲后再初始化（ms） */
-const IDLE_DELAY_MS = 2000;
+/** 延迟加载——等浏览器空闲后再初始化（ms），缩短以加快线上加载速度 */
+const IDLE_DELAY_MS = 800;
 
 /** 单次加载超时——超过此时间未就绪则重试（ms） */
 const LOAD_TIMEOUT_MS = 60_000;
@@ -110,10 +110,16 @@ export default function Live2DBot({
       if (retryCountRef.current < MAX_RETRIES) {
         // 超时后重试：增加计数，通过 key 变化强制卸载旧 canvas 并重新加载模型
         retryCountRef.current += 1;
+        console.warn(
+          `[Live2D] 加载超时（${LOAD_TIMEOUT_MS / 1000}s），第 ${retryCountRef.current}/${MAX_RETRIES} 次重试…`,
+        );
         setRetryKey((k) => k + 1);
         // status 保持 "loading"，retryKey 变化触发本 effect 重跑启动新计时器
       } else {
-        // 超过最大重试次数，静默回退到静态图标
+        // 超过最大重试次数，仅打印控制台，UI 静默回退到静态图标（不显示任何文字）
+        console.warn(
+          `[Live2D] 已超时重试 ${MAX_RETRIES} 次，回退到静态图标`,
+        );
         setStatus("error");
       }
     }, LOAD_TIMEOUT_MS);
@@ -132,13 +138,20 @@ export default function Live2DBot({
     onReadyProp?.();
   }, [onReadyProp]);
 
-  const handleError = useCallback(() => {
+  const handleError = useCallback((message: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (retryCountRef.current < MAX_RETRIES) {
-      // 模型加载失败也自动重试
+      // 模型加载失败也自动重试，仅打印控制台不显示 UI 文字
       retryCountRef.current += 1;
+      console.warn(
+        `[Live2D] 加载失败：${message}，第 ${retryCountRef.current}/${MAX_RETRIES} 次重试…`,
+      );
       setRetryKey((k) => k + 1);
     } else {
+      // 已重试多次仍失败，仅打印控制台，UI 静默回退
+      console.warn(
+        `[Live2D] 加载失败（已重试 ${MAX_RETRIES} 次）：${message}`,
+      );
       setStatus("error");
     }
   }, []);
