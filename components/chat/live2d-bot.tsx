@@ -11,11 +11,14 @@ import type { Live2DBotProps } from "./live2d/types";
 const CANVAS_WIDTH = 100;
 const CANVAS_HEIGHT = 125;
 
-/** 延迟加载——等浏览器空闲后再初始化（ms） */
-const IDLE_DELAY_MS = 2000;
+/** 延迟加载——等浏览器空闲后再初始化（ms），缩短以加快线上加载速度 */
+const IDLE_DELAY_MS = 800;
 
-/** 加载超时——超过此时间未就绪则回退到静态图标（ms） */
-const LOAD_TIMEOUT_MS = 15000;
+/** 单次加载超时——超过此时间未就绪则重试（ms） */
+const LOAD_TIMEOUT_MS = 60_000;
+
+/** 最大重试次数（超时或加载失败后自动重试，超过后才回退到静态图标） */
+const MAX_RETRIES = 3;
 
 // ─── 动态导入 Live2D Canvas（禁止 SSR） ────────────────────────────────────
 
@@ -67,65 +70,90 @@ export default function Live2DBot({
     "idle",
   );
   const [shouldLoad, setShouldLoad] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 当前已重试次数（就绪后归零） */
+  const retryCountRef = useRef(0);
+  /** 每次重试递增，作为 canvas key 强制重建模型 */
+  const [retryKey, setRetryKey] = useState(0);
 
   // ── 延迟加载逻辑 ───────────────────────────────────────────────────
 
   useEffect(() => {
     if (isMobile) return;
 
-    const idleId =
-      typeof requestIdleCallback !== "undefined"
-        ? requestIdleCallback(
-            () => {
-              setShouldLoad(true);
-              setStatus("loading");
-            },
-            { timeout: IDLE_DELAY_MS },
-          )
-        : setTimeout(() => {
-            setShouldLoad(true);
-            setStatus("loading");
-          }, IDLE_DELAY_MS);
-
-    return () => {
-      if (typeof idleId === "number") {
-        cancelIdleCallback(idleId);
-      } else {
-        clearTimeout(idleId);
-      }
-    };
+    // Safari 不支持 requestIdleCallback / cancelIdleCallback，使用 setTimeout 回退
+    if (typeof requestIdleCallback !== "undefined") {
+      const idleId = requestIdleCallback(
+        () => {
+          setShouldLoad(true);
+          setStatus("loading");
+        },
+        { timeout: IDLE_DELAY_MS },
+      );
+      return () => cancelIdleCallback(idleId);
+    } else {
+      const idleId = setTimeout(() => {
+        setShouldLoad(true);
+        setStatus("loading");
+      }, IDLE_DELAY_MS);
+      return () => clearTimeout(idleId);
+    }
   }, [isMobile]);
 
-  // ── 加载超时 ───────────────────────────────────────────────────────
+  // ── 加载超时（含重试逻辑） ─────────────────────────────────────────
 
   useEffect(() => {
     if (status !== "loading") return;
 
     timeoutRef.current = setTimeout(() => {
-      setErrorMessage("加载超时（15s）");
-      setStatus("error");
+      if (retryCountRef.current < MAX_RETRIES) {
+        // 超时后重试：增加计数，通过 key 变化强制卸载旧 canvas 并重新加载模型
+        retryCountRef.current += 1;
+        console.warn(
+          `[Live2D] 加载超时（${LOAD_TIMEOUT_MS / 1000}s），第 ${retryCountRef.current}/${MAX_RETRIES} 次重试…`,
+        );
+        setRetryKey((k) => k + 1);
+        // status 保持 "loading"，retryKey 变化触发本 effect 重跑启动新计时器
+      } else {
+        // 超过最大重试次数，仅打印控制台，UI 静默回退到静态图标（不显示任何文字）
+        console.warn(
+          `[Live2D] 已超时重试 ${MAX_RETRIES} 次，回退到静态图标`,
+        );
+        setStatus("error");
+      }
     }, LOAD_TIMEOUT_MS);
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [status]);
+  }, [status, retryKey]);
 
   // ── 回调 ───────────────────────────────────────────────────────────
 
   const handleReady = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    retryCountRef.current = 0; // 加载成功，重置重试计数
     setStatus("ready");
     onReadyProp?.();
   }, [onReadyProp]);
 
-  const handleError = useCallback((msg: string) => {
+  const handleError = useCallback((message: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setErrorMessage(msg);
-    setStatus("error");
+    if (retryCountRef.current < MAX_RETRIES) {
+      // 模型加载失败也自动重试，仅打印控制台不显示 UI 文字
+      retryCountRef.current += 1;
+      console.warn(
+        `[Live2D] 加载失败：${message}，第 ${retryCountRef.current}/${MAX_RETRIES} 次重试…`,
+      );
+      setRetryKey((k) => k + 1);
+    } else {
+      // 已重试多次仍失败，仅打印控制台，UI 静默回退
+      console.warn(
+        `[Live2D] 加载失败（已重试 ${MAX_RETRIES} 次）：${message}`,
+      );
+      setStatus("error");
+    }
   }, []);
 
   // ── 渲染 ───────────────────────────────────────────────────────────
@@ -134,25 +162,23 @@ export default function Live2DBot({
     return <StaticBot />;
   }
 
-  // 加载失败——显示原始机器人图标按钮
+  // 加载失败——静默回退到机器人图标按钮
   if (status === "error") {
-    return (
-      <span className="relative block">
-        <StaticBot />
-        {errorMessage && (
-          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-100 px-2 py-0.5 text-[10px] text-red-700 dark:bg-red-900/50 dark:text-red-300">
-            {errorMessage}
-          </span>
-        )}
-      </span>
-    );
+    return <StaticBot />;
   }
 
-  // 已开始加载——后台渲染 canvas（不可见），就绪后淡入，保持挂载避免重建模型
+  // 已开始加载——StaticBot 可见在前，canvas 后台预加载（不可见），就绪后交叉淡入淡出
   if (shouldLoad) {
     return (
       <span className="relative block h-14 w-14">
-        {/* Live2D Canvas——绝对定位居中，不裁剪溢出 */}
+        {/* 静态机器人图标——加载中可见，就绪后淡出 */}
+        <span
+          className="absolute inset-0 transition-opacity duration-500"
+          style={{ opacity: status === "ready" ? 0 : 1 }}
+        >
+          <StaticBot />
+        </span>
+        {/* Live2D Canvas——加载中不可见，就绪后淡入，绝对定位居中不裁剪溢出 */}
         <span
           className="absolute block transition-opacity duration-500"
           style={{
@@ -165,6 +191,7 @@ export default function Live2DBot({
         >
           <span style={{ pointerEvents: "auto" }}>
             <Live2DCanvas
+              key={retryKey}
               modelPath={modelPath}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
@@ -179,6 +206,6 @@ export default function Live2DBot({
     );
   }
 
-  // 初始 idle——不显示占位，保留可点击区域
-  return <span className="relative block h-14 w-14" />;
+  // 初始 idle——显示机器人图标按钮，等待延迟加载触发
+  return <StaticBot />;
 }
