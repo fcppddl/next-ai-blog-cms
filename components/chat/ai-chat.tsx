@@ -835,11 +835,7 @@ export default function AIChatWidget() {
         ) : (
           /* 关闭状态——Live2D 角色（自带加载/回退状态） */
           <span className="relative block">
-            <Live2DBot
-              modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json"
-              streaming={streaming}
-              onToggle={() => setOpen((p) => !p)}
-            />
+            <Live2DBot modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json" />
           </span>
         )}
         {/* 流式回答中指示器 */}
