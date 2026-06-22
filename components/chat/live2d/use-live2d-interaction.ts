@@ -5,8 +5,8 @@ import type { UseLive2DInteractionOptions } from "./types";
 
 // ─── 常量 ──────────────────────────────────────────────────────────────────────
 
-/** 空闲触发间隔（默认 10s），从上一段动作播放完毕后开始计时 */
-const DEFAULT_IDLE_TIMEOUT = 10_000;
+/** 空闲触发间隔（默认 15s） */
+const DEFAULT_IDLE_TIMEOUT = 15_000;
 
 /** 悬停时使用的表情索引（exp_02 = 笑脸眼） */
 const HOVER_EXPRESSION_INDEX = 1;
@@ -67,42 +67,22 @@ export function useLive2DInteraction({
   }, []);
 
   // 用 ref 持有最新的回调，避免递归 useCallback 循环依赖
-  const triggerFidgetRef = useRef<() => void>(() => {});
   const startIdleCountdownRef = useRef<() => void>(() => {});
 
-  /** 开始空闲倒计时——超时后触发摸鱼动作，等动作播完再启动下一轮倒计时 */
+  /** 开始空闲倒计时——超时后触发摸鱼动作，并立即启动下一轮倒计时 */
   startIdleCountdownRef.current = () => {
     clearIdleTimer();
-    console.log(`[Live2D 空闲] 倒计时开始 ${idleTimeoutRef.current / 1000}s — ${new Date().toISOString()}`);
     idleTimerRef.current = setTimeout(() => {
-      triggerFidgetRef.current();
+      // 触发随机动作
+      const model = modelRef.current;
+      const group = fidgetGroupRef.current;
+      if (model && group != null) {
+        const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
+        model.motion(group, randomIndex)?.catch(() => {});
+      }
+      // 立即启动下一轮倒计时（固定间隔，不等待动作播完）
+      startIdleCountdownRef.current();
     }, idleTimeoutRef.current);
-  };
-
-  /** 触发一次随机摸鱼动作——播完后自动启动下一轮空闲倒计时 */
-  triggerFidgetRef.current = () => {
-    const model = modelRef.current;
-    const group = fidgetGroupRef.current;
-    if (!model || group == null) {
-      console.warn("[Live2D 空闲] 动作触发失败——模型或组名为空");
-      return;
-    }
-    const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
-    const startTime = Date.now();
-    console.log(`[Live2D 空闲] ▶ 动作 #${randomIndex} 开始 — ${new Date().toISOString()}`);
-    // await motion 完成后再启动下一轮倒计时
-    model
-      .motion(group, randomIndex)
-      ?.then(() => {
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[Live2D 空闲] ✓ 动作 #${randomIndex} 结束 (${elapsed}s) — 启动下一轮倒计时`);
-        startIdleCountdownRef.current();
-      })
-      .catch(() => {
-        console.warn(`[Live2D 空闲] ✗ 动作 #${randomIndex} 加载失败，跳过`);
-        // motion 加载失败也启动下一轮倒计时，避免计时器死锁
-        startIdleCountdownRef.current();
-      });
   };
 
   /** 重置空闲计时器——交互事件发生时调用 */
