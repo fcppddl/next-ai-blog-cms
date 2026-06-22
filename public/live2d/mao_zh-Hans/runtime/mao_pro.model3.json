@@ -3,7 +3,7 @@
 	"FileReferences": {
 		"Moc": "mao_pro.moc3",
 		"Textures": [
-			"mao_pro.4096/texture_00.png"
+			"mao_pro.1024/texture_00.png"
 		],
 		"Physics": "mao_pro.physics3.json",
 		"Pose": "mao_pro.pose3.json",

@@ -26,6 +26,10 @@ export default function RootLayout({
       lang="en"
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* 预加载 Live2D 模型骨骼，避免首屏长时间等待 */}
+        <link rel="preload" href="/live2d/mao_zh-Hans/runtime/mao_pro.moc3" as="fetch" />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
