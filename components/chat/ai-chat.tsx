@@ -822,7 +822,7 @@ export default function AIChatWidget() {
       {/* FAB —— Live2D 角色（关闭时）/ 关闭按钮（打开时） */}
       <button
         type="button"
-        onClick={open ? () => setOpen(false) : undefined}
+        onClick={() => setOpen((p) => !p)}
         className="group relative cursor-pointer"
         aria-label={open ? "收起 AI 助手" : "打开 AI 助手"}
       >
@@ -835,10 +835,7 @@ export default function AIChatWidget() {
         ) : (
           /* 关闭状态——Live2D 角色（自带加载/回退状态） */
           <span className="relative block">
-            <Live2DBot
-              modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json"
-              onToggle={() => setOpen((p) => !p)}
-            />
+            <Live2DBot modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json" />
           </span>
         )}
         {/* 流式回答中指示器 */}

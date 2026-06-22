@@ -4,8 +4,6 @@ import type { Live2DModel } from "pixi-live2d-display/cubism4";
 export interface Live2DBotProps {
   /** 模型文件路径（相对于 public 目录，如 /live2d/haru/haru.model3.json） */
   modelPath: string;
-  /** 点击角色时触发（打开/关闭聊天面板） */
-  onToggle?: () => void;
   /** 模型加载就绪回调——父组件可用于隐藏加载态光晕 */
   onReady?: () => void;
 }
@@ -33,6 +31,4 @@ export interface UseLive2DInteractionOptions {
   canvas: HTMLCanvasElement | null;
   /** 空闲触发间隔，默认 10_000ms */
   idleTimeout?: number;
-  /** 点击角色回调（延迟触发，确保 action motion 先播放） */
-  onTap?: () => void;
 }

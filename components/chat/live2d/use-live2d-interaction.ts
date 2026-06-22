@@ -11,14 +11,8 @@ const DEFAULT_IDLE_TIMEOUT = 10_000;
 /** 悬停时使用的表情索引（exp_02 = 笑脸眼） */
 const HOVER_EXPRESSION_INDEX = 1;
 
-/** 点击时播放的动作索引（special_01 的位置） */
-const TAP_MOTION_INDEX = 3;
-
 /** 空闲摸鱼候选动作总数（mtn_02~04、special_01~03 = 6 个） */
 const FIDGET_MOTION_COUNT = 6;
-
-/** 点击后延迟打开面板的毫秒数——让动作有机会播放第一帧再切换面板 */
-const TAP_DELAY_MS = 800;
 
 // ─── 动作组发现 ────────────────────────────────────────────────────────────────
 
@@ -45,18 +39,11 @@ export function useLive2DInteraction({
   isReady,
   canvas,
   idleTimeout = DEFAULT_IDLE_TIMEOUT,
-  onTap,
 }: UseLive2DInteractionOptions) {
   // ── Refs ──────────────────────────────────────────────────────────────────
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onTapRef = useRef(onTap);
   // 缓存非 idle 动作组名（模型就绪时发现）
   const fidgetGroupRef = useRef("");
-
-  // 同步最新 props 到 ref
-  useEffect(() => {
-    onTapRef.current = onTap;
-  });
 
   // ── 发现动作组名 ─────────────────────────────────────────────────────────
 
@@ -129,32 +116,16 @@ export function useLive2DInteraction({
       resetIdleTimer();
     };
 
-    // --- 点击：播放 special_01 → 延时后触发回调打开面板 ---
-    const handleTap = () => {
-      const group = fidgetGroupRef.current;
-      // 先播放动作（motion 返回 Promise，异步加载+播放）
-      if (group) {
-        model.motion(group, TAP_MOTION_INDEX)?.catch(() => {});
-      }
-      // 延迟后再打开面板，确保动作至少播放了第一帧
-      setTimeout(() => {
-        onTapRef.current?.();
-      }, TAP_DELAY_MS);
-      resetIdleTimer();
-    };
-
     // 绑定事件
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     canvas.addEventListener("mouseenter", handleMouseEnter);
     canvas.addEventListener("mouseleave", handleMouseLeave);
-    model.on("pointertap", handleTap);
 
     // 清理
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseenter", handleMouseEnter);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
-      model.off("pointertap", handleTap);
     };
   }, [isReady, canvas, resetIdleTimer]);
 

@@ -11,8 +11,6 @@ interface Live2DCanvasProps {
   width: number;
   /** Canvas 高度（CSS 像素） */
   height: number;
-  /** 点击回调 */
-  onTap?: () => void;
   /** 模型加载成功回调 */
   onReady?: () => void;
   /** 模型加载失败回调（传入错误信息用于诊断） */
@@ -27,14 +25,13 @@ interface Live2DCanvasProps {
  *
  * 架构：
  *   useLive2DModel       → 模型初始化
- *   useLive2DInteraction → 悬停 + 空闲 + 点击反馈
+ *   useLive2DInteraction → 悬停 + 空闲摸鱼
  *   两者通过 modelRef 共享模型实例，通过 isReady 同步状态。
  */
 function Live2DCanvas({
   modelPath,
   width,
   height,
-  onTap,
   onReady,
   onError,
 }: Live2DCanvasProps) {
@@ -42,18 +39,13 @@ function Live2DCanvas({
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
 
   // 用 ref 持有回调函数，避免回调变化导致模型重建
-  const onTapRef = useRef(onTap);
   const onReadyRef = useRef(onReady);
 
-  useEffect(() => {
-    onTapRef.current = onTap;
-  });
   useEffect(() => {
     onReadyRef.current = onReady;
   });
 
   // 稳定化的回调（传给 Hook 的引用不变，避免不必要的模型重建）
-  const stableOnTap = useCallback(() => onTapRef.current?.(), []);
   const stableOnReady = useCallback(() => onReadyRef.current?.(), []);
 
   // 监听加载错误（通过 canvas 自定义事件）
@@ -76,12 +68,11 @@ function Live2DCanvas({
     onReady: stableOnReady,
   });
 
-  // 交互行为（悬停反应、空闲摸鱼、点击反馈）
+  // 交互行为（悬停反应、空闲摸鱼）
   useLive2DInteraction({
     modelRef,
     isReady,
     canvas: canvasEl,
-    onTap: stableOnTap,
   });
 
   // 提前计算 devicePixelRatio 避免 canvas 模糊

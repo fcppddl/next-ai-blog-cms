@@ -60,7 +60,6 @@ function StaticBot() {
 
 export default function Live2DBot({
   modelPath,
-  onToggle,
   onReady: onReadyProp,
 }: Live2DBotProps) {
   const isMobile = useIsMobile();
@@ -194,7 +193,6 @@ export default function Live2DBot({
               modelPath={modelPath}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              onTap={onToggle}
               onReady={handleReady}
               onError={handleError}
             />

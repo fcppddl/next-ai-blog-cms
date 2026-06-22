@@ -83,7 +83,7 @@ export function useLive2DModel({
 
         // 4. 加载模型
         const model = await Live2DModelClass.from(modelPath, {
-          autoHitTest: true,
+          autoHitTest: false,
           autoFocus: false,
         });
         modelRef.current = model;
