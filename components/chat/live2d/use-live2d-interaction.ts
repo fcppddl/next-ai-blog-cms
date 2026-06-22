@@ -5,7 +5,7 @@ import type { UseLive2DInteractionOptions } from "./types";
 
 // ─── 常量 ──────────────────────────────────────────────────────────────────────
 
-/** 空闲触发间隔（默认 10s） */
+/** 空闲触发间隔（默认 10s），从上一段动作播放完毕后开始计时 */
 const DEFAULT_IDLE_TIMEOUT = 10_000;
 
 /** 悬停时使用的表情索引（exp_02 = 笑脸眼） */
@@ -19,18 +19,15 @@ const FIDGET_MOTION_COUNT = 6;
 /**
  * 从模型 motionManager 中找出非 Idle 的动作组名。
  * 模型的 model3.json 中 Idle 以外的组的 key 可能是空字符串 ""，
- * pixi-live2d-display 可能无法正确处理空 key，所以动态查找实际的组名。
+ * 必须用 == null 检查而非 !falsy，因为 "" 是合法的组名。
  */
 function findFidgetGroup(model: {
   internalModel?: { motionManager?: { definitions?: Partial<Record<string, unknown[]>> } };
 }): string | null {
   const defs = model.internalModel?.motionManager?.definitions;
   if (!defs) return null;
-  // 找第一个不是 "Idle" 的组（不区分大小写）
   const keys = Object.keys(defs);
-  // 注意：组的 key 可能是空字符串 ""，这也是合法的组名
   const fidget = keys.find((k) => k.toLowerCase() !== "idle");
-  // 明确返回 null（而非 ""）表示未找到，避免空字符串被 falsy 检查误判
   return fidget !== undefined ? fidget : null;
 }
 
@@ -46,6 +43,11 @@ export function useLive2DInteraction({
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 缓存非 idle 动作组名（模型就绪时发现，null = 未找到）
   const fidgetGroupRef = useRef<string | null>(null);
+  // 用 ref 持有 idleTimeout，避免 useCallback 依赖变化
+  const idleTimeoutRef = useRef(idleTimeout);
+  useEffect(() => {
+    idleTimeoutRef.current = idleTimeout;
+  });
 
   // ── 发现动作组名 ─────────────────────────────────────────────────────────
 
@@ -57,8 +59,6 @@ export function useLive2DInteraction({
 
   // ── 空闲计时器管理 ───────────────────────────────────────────────────────
 
-  const startIdleTimerRef = useRef<() => void>(() => {});
-
   const clearIdleTimer = useCallback(() => {
     if (idleTimerRef.current !== null) {
       clearTimeout(idleTimerRef.current);
@@ -66,34 +66,40 @@ export function useLive2DInteraction({
     }
   }, []);
 
-  startIdleTimerRef.current = () => {
+  // 用 ref 持有最新的回调，避免递归 useCallback 循环依赖
+  const triggerFidgetRef = useRef<() => void>(() => {});
+  const startIdleCountdownRef = useRef<() => void>(() => {});
+
+  /** 开始空闲倒计时——超时后触发摸鱼动作，等动作播完再启动下一轮倒计时 */
+  startIdleCountdownRef.current = () => {
     clearIdleTimer();
     idleTimerRef.current = setTimeout(() => {
-      const model = modelRef.current;
-      if (!model) return;
-      const group = fidgetGroupRef.current;
-      // group 可能是空字符串 ""（合法的组名），用 == null 检查
-      if (group == null) return;
-      // 随机选一个非 idle 动作播放
-      try {
-        const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
-        model.motion(group, randomIndex)?.catch(() => {});
-      } catch {
-        // motion 播放失败静默忽略
-      }
-      // 动作播完后重新启动空闲计时器（递归）
-      startIdleTimerRef.current();
-    }, idleTimeout);
+      triggerFidgetRef.current();
+    }, idleTimeoutRef.current);
   };
 
-  const startIdleTimer = useCallback(() => {
-    startIdleTimerRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clearIdleTimer, idleTimeout]);
+  /** 触发一次随机摸鱼动作——播完后自动启动下一轮空闲倒计时 */
+  triggerFidgetRef.current = () => {
+    const model = modelRef.current;
+    const group = fidgetGroupRef.current;
+    if (!model || group == null) return;
+    const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
+    // await motion 完成后再启动下一轮倒计时
+    model
+      .motion(group, randomIndex)
+      ?.then(() => {
+        startIdleCountdownRef.current();
+      })
+      .catch(() => {
+        // motion 加载失败也启动下一轮倒计时，避免计时器死锁
+        startIdleCountdownRef.current();
+      });
+  };
 
+  /** 重置空闲计时器——交互事件发生时调用 */
   const resetIdleTimer = useCallback(() => {
     clearIdleTimer();
-    startIdleTimerRef.current();
+    startIdleCountdownRef.current();
   }, [clearIdleTimer]);
 
   // ── 交互事件绑定（模型就绪后执行） ──────────────────────────────────────
@@ -136,7 +142,7 @@ export function useLive2DInteraction({
 
   useEffect(() => {
     if (!isReady) return;
-    startIdleTimer();
+    startIdleCountdownRef.current();
     return () => clearIdleTimer();
-  }, [isReady, startIdleTimer, clearIdleTimer]);
+  }, [isReady, clearIdleTimer]);
 }
