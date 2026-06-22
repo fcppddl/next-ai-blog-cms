@@ -23,13 +23,15 @@ const FIDGET_MOTION_COUNT = 6;
  */
 function findFidgetGroup(model: {
   internalModel?: { motionManager?: { definitions?: Partial<Record<string, unknown[]>> } };
-}): string {
+}): string | null {
   const defs = model.internalModel?.motionManager?.definitions;
-  if (!defs) return "";
+  if (!defs) return null;
   // 找第一个不是 "Idle" 的组（不区分大小写）
   const keys = Object.keys(defs);
+  // 注意：组的 key 可能是空字符串 ""，这也是合法的组名
   const fidget = keys.find((k) => k.toLowerCase() !== "idle");
-  return fidget || "";
+  // 明确返回 null（而非 ""）表示未找到，避免空字符串被 falsy 检查误判
+  return fidget !== undefined ? fidget : null;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
@@ -42,8 +44,8 @@ export function useLive2DInteraction({
 }: UseLive2DInteractionOptions) {
   // ── Refs ──────────────────────────────────────────────────────────────────
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 缓存非 idle 动作组名（模型就绪时发现）
-  const fidgetGroupRef = useRef("");
+  // 缓存非 idle 动作组名（模型就绪时发现，null = 未找到）
+  const fidgetGroupRef = useRef<string | null>(null);
 
   // ── 发现动作组名 ─────────────────────────────────────────────────────────
 
@@ -70,7 +72,8 @@ export function useLive2DInteraction({
       const model = modelRef.current;
       if (!model) return;
       const group = fidgetGroupRef.current;
-      if (!group) return;
+      // group 可能是空字符串 ""（合法的组名），用 == null 检查
+      if (group == null) return;
       // 随机选一个非 idle 动作播放
       try {
         const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
