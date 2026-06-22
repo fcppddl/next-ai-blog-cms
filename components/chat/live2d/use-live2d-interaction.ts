@@ -14,9 +14,6 @@ const HOVER_EXPRESSION_INDEX = 1;
 /** 空闲摸鱼候选动作总数（mtn_02~04、special_01~03 = 6 个） */
 const FIDGET_MOTION_COUNT = 6;
 
-/** 轮询动作是否播放完成的间隔（ms） */
-const MOTION_POLL_INTERVAL = 200;
-
 // ─── 动作组发现 ────────────────────────────────────────────────────────────────
 
 /**
@@ -34,21 +31,6 @@ function findFidgetGroup(model: {
   return fidget !== undefined ? fidget : null;
 }
 
-// ─── motionManager 运行时接口（pixi-live2d-display 类型定义未公开这些方法） ──
-
-interface MotionManagerAPI {
-  start(motion: unknown, group: string, index: number, priority: number): boolean;
-  isActive(group: string, index: number): boolean;
-}
-
-function getMotionManagerAPI(model: {
-  internalModel?: { motionManager?: unknown };
-}): MotionManagerAPI | null {
-  const mm = model.internalModel?.motionManager;
-  if (!mm) return null;
-  return mm as unknown as MotionManagerAPI;
-}
-
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useLive2DInteraction({
@@ -59,7 +41,9 @@ export function useLive2DInteraction({
 }: UseLive2DInteractionOptions) {
   // ── Refs ──────────────────────────────────────────────────────────────────
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 缓存非 idle 动作组名（模型就绪时发现，null = 未找到）
   const fidgetGroupRef = useRef<string | null>(null);
+  // 用 ref 持有 idleTimeout，避免 useCallback 依赖变化
   const idleTimeoutRef = useRef(idleTimeout);
   useEffect(() => {
     idleTimeoutRef.current = idleTimeout;
@@ -82,15 +66,14 @@ export function useLive2DInteraction({
     }
   }, []);
 
+  // 用 ref 持有最新的回调，避免递归 useCallback 循环依赖
   const triggerFidgetRef = useRef<() => void>(() => {});
   const startIdleCountdownRef = useRef<() => void>(() => {});
 
   /** 开始空闲倒计时——超时后触发摸鱼动作，等动作播完再启动下一轮倒计时 */
   startIdleCountdownRef.current = () => {
     clearIdleTimer();
-    console.log(
-      `[Live2D 空闲] 倒计时开始 ${idleTimeoutRef.current / 1000}s — ${new Date().toISOString()}`,
-    );
+    console.log(`[Live2D 空闲] 倒计时开始 ${idleTimeoutRef.current / 1000}s — ${new Date().toISOString()}`);
     idleTimerRef.current = setTimeout(() => {
       triggerFidgetRef.current();
     }, idleTimeoutRef.current);
@@ -102,43 +85,24 @@ export function useLive2DInteraction({
     const group = fidgetGroupRef.current;
     if (!model || group == null) {
       console.warn("[Live2D 空闲] 动作触发失败——模型或组名为空");
-      startIdleCountdownRef.current();
       return;
     }
     const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
     const startTime = Date.now();
-    console.log(
-      `[Live2D 空闲] ▶ 动作 #${randomIndex} 开始 (group="${group}") — ${new Date().toISOString()}`,
-    );
-
-    // 通过 motionManager.start 直接播放，绕过 model.motion() 对空字符串 group key 的 Promise 瞬间 resolve 问题
-    const mm = getMotionManagerAPI(model);
-    if (!mm) {
-      console.warn("[Live2D 空闲] motionManager 不可用");
-      startIdleCountdownRef.current();
-      return;
-    }
-
-    const ok = mm.start(undefined, group, randomIndex, 3 /* FORCE priority */ );
-    console.log(`[Live2D 空闲] motionManager.start("${group}", ${randomIndex}) = ${ok}`);
-
-    if (!ok) {
-      console.warn(`[Live2D 空闲] ✗ motionManager 拒绝播放 #${randomIndex}`);
-      startIdleCountdownRef.current();
-      return;
-    }
-
-    // 轮询等待动作播放完成
-    const checkInterval = setInterval(() => {
-      if (!mm.isActive(group, randomIndex)) {
-        clearInterval(checkInterval);
+    console.log(`[Live2D 空闲] ▶ 动作 #${randomIndex} 开始 — ${new Date().toISOString()}`);
+    // await motion 完成后再启动下一轮倒计时
+    model
+      .motion(group, randomIndex)
+      ?.then(() => {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(
-          `[Live2D 空闲] ✓ 动作 #${randomIndex} 结束 (${elapsed}s) — 启动下一轮倒计时`,
-        );
+        console.log(`[Live2D 空闲] ✓ 动作 #${randomIndex} 结束 (${elapsed}s) — 启动下一轮倒计时`);
         startIdleCountdownRef.current();
-      }
-    }, MOTION_POLL_INTERVAL);
+      })
+      .catch(() => {
+        console.warn(`[Live2D 空闲] ✗ 动作 #${randomIndex} 加载失败，跳过`);
+        // motion 加载失败也启动下一轮倒计时，避免计时器死锁
+        startIdleCountdownRef.current();
+      });
   };
 
   /** 重置空闲计时器——交互事件发生时调用 */
@@ -153,24 +117,29 @@ export function useLive2DInteraction({
     const model = modelRef.current;
     if (!model || !canvas) return;
 
+    // --- 鼠标移动：重置空闲计时器 ---
     const handleMouseMove = () => {
       resetIdleTimer();
     };
 
+    // --- 鼠标进入：悬停反应 ---
     const handleMouseEnter = () => {
       model.expression(HOVER_EXPRESSION_INDEX).catch(() => {});
       resetIdleTimer();
     };
 
+    // --- 鼠标离开：复位表情 ---
     const handleMouseLeave = () => {
       model.expression().catch(() => {});
       resetIdleTimer();
     };
 
+    // 绑定事件
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     canvas.addEventListener("mouseenter", handleMouseEnter);
     canvas.addEventListener("mouseleave", handleMouseLeave);
 
+    // 清理
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseenter", handleMouseEnter);
