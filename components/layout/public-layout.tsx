@@ -11,7 +11,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import AIChatWidget from "@/components/chat/ai-chat";
 import SiteFooter from "@/components/layout/site-footer";
 
 const navLinks = [{ href: "/about", ariaLabel: "关于" }];
@@ -126,8 +125,7 @@ export default function PublicLayout({
         {/* Footer */}
         <SiteFooter />
 
-        {/* AI Chat Assistant */}
-        <AIChatWidget />
+        {/* AI Chat Assistant 已移至 RootLayout，避免客户端导航时重新挂载 */}
       </div>
     </TooltipProvider>
   );

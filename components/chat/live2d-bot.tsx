@@ -12,7 +12,7 @@ const CANVAS_WIDTH = 100;
 const CANVAS_HEIGHT = 125;
 
 /** 延迟加载——等浏览器空闲后再初始化（ms），缩短以加快线上加载速度 */
-const IDLE_DELAY_MS = 800;
+const IDLE_DELAY_MS = 200;
 
 /** 单次加载超时——超过此时间未就绪则重试（ms） */
 const LOAD_TIMEOUT_MS = 60_000;
