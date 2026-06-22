@@ -5,6 +5,7 @@ import AuthProvider from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import PublicEffects from "@/components/layout/public-effects";
+import AIChatWidget from "@/components/chat/ai-chat";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,6 +31,8 @@ export default function RootLayout({
           <AuthProvider>{children}</AuthProvider>
           <Toaster />
           <PublicEffects />
+          {/* AI Chat Assistant — 放在根布局避免客户端导航时重新挂载导致 Live2D 角色闪烁 */}
+          <AIChatWidget />
         </ThemeProvider>
       </body>
     </html>
