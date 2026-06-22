@@ -57,6 +57,9 @@ export function useLive2DInteraction({
 
   // ── 空闲计时器管理 ───────────────────────────────────────────────────────
 
+  // 用 ref 持有递归调用的最新 startIdleTimer 引用，避免 useCallback 循环依赖
+  const startIdleTimerRef = useRef<() => void>(() => {});
+
   const clearIdleTimer = useCallback(() => {
     if (idleTimerRef.current !== null) {
       clearTimeout(idleTimerRef.current);
@@ -64,7 +67,7 @@ export function useLive2DInteraction({
     }
   }, []);
 
-  const startIdleTimer = useCallback(() => {
+  startIdleTimerRef.current = () => {
     clearIdleTimer();
     // 说话中不启动空闲计时器
     if (speakingRef.current) return;
@@ -78,15 +81,20 @@ export function useLive2DInteraction({
       } catch {
         // motion 播放失败静默忽略
       }
-      // 动作播完后重新启动空闲计时器
-      startIdleTimer();
+      // 动作播完后重新启动空闲计时器（递归）
+      startIdleTimerRef.current();
     }, idleTimeout);
+  };
+
+  const startIdleTimer = useCallback(() => {
+    startIdleTimerRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- idleTimeout 变化由 startIdleTimerRef.current 自动同步
   }, [clearIdleTimer, idleTimeout]);
 
   const resetIdleTimer = useCallback(() => {
     clearIdleTimer();
-    startIdleTimer();
-  }, [clearIdleTimer, startIdleTimer]);
+    startIdleTimerRef.current();
+  }, [clearIdleTimer]);
 
   // ── 交互事件绑定（模型就绪后执行） ──────────────────────────────────────
 
