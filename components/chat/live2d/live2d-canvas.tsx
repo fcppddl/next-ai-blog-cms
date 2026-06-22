@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { useLive2DModel } from "./use-live2d-model";
+import { useLive2DInteraction } from "./use-live2d-interaction";
 
 interface Live2DCanvasProps {
   /** 模型文件路径 */
@@ -26,9 +27,10 @@ interface Live2DCanvasProps {
  * 负责创建 WebGL Canvas 并挂载 Live2D 模型。
  * 通过 next/dynamic 延迟加载，不阻塞首屏。
  *
- * 使用 callback ref + state 模式：React 渲染时 useRef 尚未绑定 DOM，
- * 无法传给 useEffect；callback ref 在 DOM 挂载后触发 setState，驱动
- * useLive2DModel 拿到真实 canvas 元素。
+ * 架构：
+ *   useLive2DModel     → 模型初始化 + 嘴巴动画
+ *   useLive2DInteraction → 视线跟随 + 悬停 + 空闲 + 点击反馈
+ *   两者通过 modelRef 共享模型实例，通过 isReady 同步状态。
  */
 function Live2DCanvas({
   modelPath,
@@ -43,7 +45,6 @@ function Live2DCanvas({
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
 
   // 用 ref 持有回调函数，避免回调变化导致模型重建
-  // React 19 不允许在 render 期间写入 ref，改在 effect 中同步
   const onTapRef = useRef(onTap);
   const onReadyRef = useRef(onReady);
 
@@ -58,12 +59,13 @@ function Live2DCanvas({
   const stableOnTap = useCallback(() => onTapRef.current?.(), []);
   const stableOnReady = useCallback(() => onReadyRef.current?.(), []);
 
-  // 监听加载错误（通过 canvas 自定义事件），提取错误详情传给 onError
+  // 监听加载错误（通过 canvas 自定义事件）
   useEffect(() => {
     if (!canvasEl) return;
     const handleError = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const msg = detail instanceof Error ? detail.message : String(detail ?? "未知错误");
+      const msg =
+        detail instanceof Error ? detail.message : String(detail ?? "未知错误");
       onError?.(msg);
     };
     canvasEl.addEventListener("live2d-error", handleError);
@@ -71,16 +73,25 @@ function Live2DCanvas({
   }, [canvasEl, onError]);
 
   // 初始化模型（canvasEl 非 null 时 hook 内部的 useEffect 才会真正执行）
-  useLive2DModel({
+  const { modelRef, isReady } = useLive2DModel({
     canvas: canvasEl,
     modelPath,
-    onTap: stableOnTap,
-    onReady: stableOnReady,
     speaking: streaming,
+    onReady: stableOnReady,
+  });
+
+  // 交互行为（视线跟随、悬停反应、空闲摸鱼、点击反馈）
+  useLive2DInteraction({
+    modelRef,
+    isReady,
+    canvas: canvasEl,
+    speaking: streaming,
+    onTap: stableOnTap,
   });
 
   // 提前计算 devicePixelRatio 避免 canvas 模糊
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const dpr =
+    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
 
   return (
     <canvas

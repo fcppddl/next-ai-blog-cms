@@ -29,8 +29,10 @@ export interface UseLive2DModelOptions {
 
 // 交互 Hook 参数
 export interface UseLive2DInteractionOptions {
-  /** PixiJS Live2DModel 实例引用（来自 useLive2DModel） */
-  modelRef: React.RefObject<Live2DModel>;
+  /** PixiJS Live2DModel 实例引用（来自 useLive2DModel，就绪前 current 为 null） */
+  modelRef: React.RefObject<Live2DModel | null>;
+  /** 模型是否已就绪（来自 useLive2DModel.isReady）——用作 effect 依赖触发交互初始化 */
+  isReady: boolean;
   /** Canvas DOM 元素（用于监听 mouseenter/mouseleave） */
   canvas: HTMLCanvasElement | null;
   /** AI 是否正在说话（说话时暂停空闲计时器） */

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import type { Live2DModel } from "pixi-live2d-display/cubism4";
 import type { UseLive2DInteractionOptions } from "./types";
+import { trySetParam } from "./live2d-utils";
 
 // ─── 常量 ──────────────────────────────────────────────────────────────────────
 
@@ -30,32 +30,11 @@ const EYE_TRACK_PARAMS: Array<{ name: string; scale: number }> = [
   { name: "ParamEyeBallY", scale: 0.8 },
 ];
 
-// ─── 参数访问辅助 ──────────────────────────────────────────────────────────────
-
-// pixi-live2d-display 类型定义未包含 getParamIndex/setParamFloat，
-// 但运行时这些方法存在
-interface ModelParamAPI {
-  getParamIndex(name: string): number;
-  setParamFloat(name: string, value: number): void;
-}
-
-/** 安全设置模型参数——参数不存在则静默忽略 */
-function trySetParam(model: Live2DModel, name: string, value: number): void {
-  try {
-    const api = model as unknown as ModelParamAPI;
-    const idx = api.getParamIndex(name);
-    if (typeof idx === "number" && idx >= 0) {
-      api.setParamFloat(name, value);
-    }
-  } catch {
-    // 参数不存在则静默忽略
-  }
-}
-
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useLive2DInteraction({
   modelRef,
+  isReady,
   canvas,
   speaking = false,
   idleTimeout = DEFAULT_IDLE_TIMEOUT,
@@ -183,22 +162,22 @@ export function useLive2DInteraction({
         tickerRef.current = null;
       }
     };
-  }, [modelRef.current, canvas, resetIdleTimer]);
+  }, [isReady, canvas, resetIdleTimer]);
 
   // ── 启动初始空闲计时器 ───────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!modelRef.current) return;
+    if (!isReady) return;
     startIdleTimer();
     return () => clearIdleTimer();
-  }, [modelRef.current, startIdleTimer, clearIdleTimer]);
+  }, [isReady, startIdleTimer, clearIdleTimer]);
 
   // ── 说话状态变化时管理空闲计时器 ─────────────────────────────────────────
 
   useEffect(() => {
     if (speaking) {
       clearIdleTimer();
-    } else if (modelRef.current) {
+    } else if (isReady) {
       startIdleTimer();
     }
   }, [speaking, clearIdleTimer, startIdleTimer]);
