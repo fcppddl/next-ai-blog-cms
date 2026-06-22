@@ -73,6 +73,7 @@ export function useLive2DInteraction({
   /** 开始空闲倒计时——超时后触发摸鱼动作，等动作播完再启动下一轮倒计时 */
   startIdleCountdownRef.current = () => {
     clearIdleTimer();
+    console.log(`[Live2D 空闲] 倒计时开始 ${idleTimeoutRef.current / 1000}s — ${new Date().toISOString()}`);
     idleTimerRef.current = setTimeout(() => {
       triggerFidgetRef.current();
     }, idleTimeoutRef.current);
@@ -82,15 +83,23 @@ export function useLive2DInteraction({
   triggerFidgetRef.current = () => {
     const model = modelRef.current;
     const group = fidgetGroupRef.current;
-    if (!model || group == null) return;
+    if (!model || group == null) {
+      console.warn("[Live2D 空闲] 动作触发失败——模型或组名为空");
+      return;
+    }
     const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
+    const startTime = Date.now();
+    console.log(`[Live2D 空闲] ▶ 动作 #${randomIndex} 开始 — ${new Date().toISOString()}`);
     // await motion 完成后再启动下一轮倒计时
     model
       .motion(group, randomIndex)
       ?.then(() => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Live2D 空闲] ✓ 动作 #${randomIndex} 结束 (${elapsed}s) — 启动下一轮倒计时`);
         startIdleCountdownRef.current();
       })
       .catch(() => {
+        console.warn(`[Live2D 空闲] ✗ 动作 #${randomIndex} 加载失败，跳过`);
         // motion 加载失败也启动下一轮倒计时，避免计时器死锁
         startIdleCountdownRef.current();
       });
