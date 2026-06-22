@@ -1,3 +1,5 @@
+import type { Live2DModel } from "pixi-live2d-display/cubism4";
+
 // 组件对外 Props
 export interface Live2DBotProps {
   /** 模型文件路径（相对于 public 目录，如 /live2d/haru/haru.model3.json） */
@@ -28,7 +30,7 @@ export interface UseLive2DModelOptions {
 // 交互 Hook 参数
 export interface UseLive2DInteractionOptions {
   /** PixiJS Live2DModel 实例引用（来自 useLive2DModel） */
-  modelRef: React.RefObject<import("pixi-live2d-display/cubism4").Live2DModel | null>;
+  modelRef: React.RefObject<Live2DModel>;
   /** Canvas DOM 元素（用于监听 mouseenter/mouseleave） */
   canvas: HTMLCanvasElement | null;
   /** AI 是否正在说话（说话时暂停空闲计时器） */
