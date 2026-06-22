@@ -11,17 +11,32 @@ const DEFAULT_IDLE_TIMEOUT = 10_000;
 /** 悬停时使用的表情索引（exp_02 = 笑脸眼） */
 const HOVER_EXPRESSION_INDEX = 1;
 
-/** 点击时播放的动作索引（special_01 在 unnamed group 中的 index） */
+/** 点击时播放的动作索引（special_01 的位置） */
 const TAP_MOTION_INDEX = 3;
-
-/** 非 idle 动作所在的 group 名（空字符串，模型 model3.json 中未命名的组） */
-const FIDGET_GROUP = "";
 
 /** 空闲摸鱼候选动作总数（mtn_02~04、special_01~03 = 6 个） */
 const FIDGET_MOTION_COUNT = 6;
 
-/** 点击后延迟打开面板的毫秒数——让点击动作有机会播放第一帧 */
-const TAP_DELAY_MS = 500;
+/** 点击后延迟打开面板的毫秒数——让动作有机会播放第一帧再切换面板 */
+const TAP_DELAY_MS = 800;
+
+// ─── 动作组发现 ────────────────────────────────────────────────────────────────
+
+/**
+ * 从模型 motionManager 中找出非 Idle 的动作组名。
+ * 模型的 model3.json 中 Idle 以外的组的 key 可能是空字符串 ""，
+ * pixi-live2d-display 可能无法正确处理空 key，所以动态查找实际的组名。
+ */
+function findFidgetGroup(model: {
+  internalModel?: { motionManager?: { definitions?: Partial<Record<string, unknown[]>> } };
+}): string {
+  const defs = model.internalModel?.motionManager?.definitions;
+  if (!defs) return "";
+  // 找第一个不是 "Idle" 的组（不区分大小写）
+  const keys = Object.keys(defs);
+  const fidget = keys.find((k) => k.toLowerCase() !== "idle");
+  return fidget || "";
+}
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -35,15 +50,24 @@ export function useLive2DInteraction({
   // ── Refs ──────────────────────────────────────────────────────────────────
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTapRef = useRef(onTap);
+  // 缓存非 idle 动作组名（模型就绪时发现）
+  const fidgetGroupRef = useRef("");
 
   // 同步最新 props 到 ref
   useEffect(() => {
     onTapRef.current = onTap;
   });
 
+  // ── 发现动作组名 ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const model = modelRef.current;
+    if (!model || !isReady) return;
+    fidgetGroupRef.current = findFidgetGroup(model);
+  }, [isReady]);
+
   // ── 空闲计时器管理 ───────────────────────────────────────────────────────
 
-  // 用 ref 持有递归调用的最新 startIdleTimer 引用，避免 useCallback 循环依赖
   const startIdleTimerRef = useRef<() => void>(() => {});
 
   const clearIdleTimer = useCallback(() => {
@@ -58,10 +82,12 @@ export function useLive2DInteraction({
     idleTimerRef.current = setTimeout(() => {
       const model = modelRef.current;
       if (!model) return;
+      const group = fidgetGroupRef.current;
+      if (!group) return;
       // 随机选一个非 idle 动作播放
       try {
         const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
-        model.motion(FIDGET_GROUP, randomIndex);
+        model.motion(group, randomIndex)?.catch(() => {});
       } catch {
         // motion 播放失败静默忽略
       }
@@ -72,7 +98,7 @@ export function useLive2DInteraction({
 
   const startIdleTimer = useCallback(() => {
     startIdleTimerRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- idleTimeout 变化由 startIdleTimerRef.current 自动同步
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearIdleTimer, idleTimeout]);
 
   const resetIdleTimer = useCallback(() => {
@@ -93,7 +119,6 @@ export function useLive2DInteraction({
 
     // --- 鼠标进入：悬停反应 ---
     const handleMouseEnter = () => {
-      // 尝试设置笑脸表情（exp_02 = 笑脸眼），失败则静默回退
       model.expression(HOVER_EXPRESSION_INDEX).catch(() => {});
       resetIdleTimer();
     };
@@ -104,15 +129,14 @@ export function useLive2DInteraction({
       resetIdleTimer();
     };
 
-    // --- 点击：播放 special_01 → 延迟后触发回调 ---
+    // --- 点击：播放 special_01 → 延时后触发回调打开面板 ---
     const handleTap = () => {
-      // 先播放动作
-      try {
-        model.motion(FIDGET_GROUP, TAP_MOTION_INDEX);
-      } catch {
-        // motion 播放失败静默忽略
+      const group = fidgetGroupRef.current;
+      // 先播放动作（motion 返回 Promise，异步加载+播放）
+      if (group) {
+        model.motion(group, TAP_MOTION_INDEX)?.catch(() => {});
       }
-      // 延迟后再打开面板，让动作有机会播放
+      // 延迟后再打开面板，确保动作至少播放了第一帧
       setTimeout(() => {
         onTapRef.current?.();
       }, TAP_DELAY_MS);

@@ -822,7 +822,7 @@ export default function AIChatWidget() {
       {/* FAB —— Live2D 角色（关闭时）/ 关闭按钮（打开时） */}
       <button
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={open ? () => setOpen(false) : undefined}
         className="group relative cursor-pointer"
         aria-label={open ? "收起 AI 助手" : "打开 AI 助手"}
       >
