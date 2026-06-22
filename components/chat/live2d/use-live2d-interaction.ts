@@ -69,21 +69,23 @@ export function useLive2DInteraction({
   // 用 ref 持有最新的回调，避免递归 useCallback 循环依赖
   const startIdleCountdownRef = useRef<() => void>(() => {});
 
-  /** 开始空闲倒计时——超时后触发摸鱼动作，并立即启动下一轮倒计时 */
-  startIdleCountdownRef.current = () => {
-    clearIdleTimer();
-    idleTimerRef.current = setTimeout(() => {
-      // 触发随机动作
-      const model = modelRef.current;
-      const group = fidgetGroupRef.current;
-      if (model && group != null) {
-        const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
-        model.motion(group, randomIndex)?.catch(() => {});
-      }
-      // 立即启动下一轮倒计时（固定间隔，不等待动作播完）
-      startIdleCountdownRef.current();
-    }, idleTimeoutRef.current);
-  };
+  // 在 effect 中赋值 ref.current，避免 render 期间访问 ref（react-hooks/refs）
+  useEffect(() => {
+    startIdleCountdownRef.current = () => {
+      clearIdleTimer();
+      idleTimerRef.current = setTimeout(() => {
+        // 触发随机动作
+        const model = modelRef.current;
+        const group = fidgetGroupRef.current;
+        if (model && group != null) {
+          const randomIndex = Math.floor(Math.random() * FIDGET_MOTION_COUNT);
+          model.motion(group, randomIndex)?.catch(() => {});
+        }
+        // 立即启动下一轮倒计时（固定间隔，不等待动作播完）
+        startIdleCountdownRef.current();
+      }, idleTimeoutRef.current);
+    };
+  }, [clearIdleTimer]);
 
   /** 重置空闲计时器——交互事件发生时调用 */
   const resetIdleTimer = useCallback(() => {
