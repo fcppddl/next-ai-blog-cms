@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { UseLive2DInteractionOptions } from "./types";
-import { trySetParam } from "./live2d-utils";
 
 // ─── 常量 ──────────────────────────────────────────────────────────────────────
 
@@ -21,14 +20,8 @@ const FIDGET_GROUP = "";
 /** 空闲摸鱼候选动作总数（mtn_02~04、special_01~03 = 6 个） */
 const FIDGET_MOTION_COUNT = 6;
 
-// ─── 视线跟踪参数名及缩放系数 ─────────────────────────────────────────────────
-
-const EYE_TRACK_PARAMS: Array<{ name: string; scale: number }> = [
-  { name: "ParamAngleX", scale: 25 },
-  { name: "ParamAngleY", scale: 20 },
-  { name: "ParamEyeBallX", scale: 0.8 },
-  { name: "ParamEyeBallY", scale: 0.8 },
-];
+/** 点击后延迟打开面板的毫秒数——让点击动作有机会播放第一帧 */
+const TAP_DELAY_MS = 500;
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -36,21 +29,14 @@ export function useLive2DInteraction({
   modelRef,
   isReady,
   canvas,
-  speaking = false,
   idleTimeout = DEFAULT_IDLE_TIMEOUT,
   onTap,
 }: UseLive2DInteractionOptions) {
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const tickerRef = useRef<{ destroy(): void } | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const speakingRef = useRef(speaking);
   const onTapRef = useRef(onTap);
 
   // 同步最新 props 到 ref
-  useEffect(() => {
-    speakingRef.current = speaking;
-  });
   useEffect(() => {
     onTapRef.current = onTap;
   });
@@ -69,8 +55,6 @@ export function useLive2DInteraction({
 
   startIdleTimerRef.current = () => {
     clearIdleTimer();
-    // 说话中不启动空闲计时器
-    if (speakingRef.current) return;
     idleTimerRef.current = setTimeout(() => {
       const model = modelRef.current;
       if (!model) return;
@@ -102,11 +86,8 @@ export function useLive2DInteraction({
     const model = modelRef.current;
     if (!model || !canvas) return;
 
-    // --- 鼠标移动：视线跟随 ---
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+    // --- 鼠标移动：重置空闲计时器 ---
+    const handleMouseMove = () => {
       resetIdleTimer();
     };
 
@@ -123,14 +104,18 @@ export function useLive2DInteraction({
       resetIdleTimer();
     };
 
-    // --- 点击：播放 special_01 + 触发回调 ---
+    // --- 点击：播放 special_01 → 延迟后触发回调 ---
     const handleTap = () => {
-      onTapRef.current?.();
+      // 先播放动作
       try {
         model.motion(FIDGET_GROUP, TAP_MOTION_INDEX);
       } catch {
         // motion 播放失败静默忽略
       }
+      // 延迟后再打开面板，让动作有机会播放
+      setTimeout(() => {
+        onTapRef.current?.();
+      }, TAP_DELAY_MS);
       resetIdleTimer();
     };
 
@@ -140,35 +125,12 @@ export function useLive2DInteraction({
     canvas.addEventListener("mouseleave", handleMouseLeave);
     model.on("pointertap", handleTap);
 
-    // --- 创建 Ticker：逐帧应用视线跟踪参数 ---
-    const PIXI = (window as unknown as Record<string, unknown>)
-      .PIXI as typeof import("pixi.js");
-    const ticker = new PIXI.Ticker();
-    tickerRef.current = ticker;
-    ticker.add(() => {
-      const m = modelRef.current;
-      if (!m) return;
-
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-
-      // 应用视线跟踪参数（X 参数用 mx，Y 参数用 my）
-      for (const { name, scale } of EYE_TRACK_PARAMS) {
-        trySetParam(m, name, (name.includes("X") ? mx : my) * scale);
-      }
-    });
-    ticker.start();
-
     // 清理
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseenter", handleMouseEnter);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
       model.off("pointertap", handleTap);
-      if (tickerRef.current) {
-        tickerRef.current.destroy();
-        tickerRef.current = null;
-      }
     };
   }, [isReady, canvas, resetIdleTimer]);
 
@@ -179,14 +141,4 @@ export function useLive2DInteraction({
     startIdleTimer();
     return () => clearIdleTimer();
   }, [isReady, startIdleTimer, clearIdleTimer]);
-
-  // ── 说话状态变化时管理空闲计时器 ─────────────────────────────────────────
-
-  useEffect(() => {
-    if (speaking) {
-      clearIdleTimer();
-    } else if (isReady) {
-      startIdleTimer();
-    }
-  }, [speaking, clearIdleTimer, startIdleTimer]);
 }

@@ -11,8 +11,6 @@ interface Live2DCanvasProps {
   width: number;
   /** Canvas 高度（CSS 像素） */
   height: number;
-  /** AI 是否正在流式回复 */
-  streaming?: boolean;
   /** 点击回调 */
   onTap?: () => void;
   /** 模型加载成功回调 */
@@ -28,15 +26,14 @@ interface Live2DCanvasProps {
  * 通过 next/dynamic 延迟加载，不阻塞首屏。
  *
  * 架构：
- *   useLive2DModel     → 模型初始化 + 嘴巴动画
- *   useLive2DInteraction → 视线跟随 + 悬停 + 空闲 + 点击反馈
+ *   useLive2DModel       → 模型初始化
+ *   useLive2DInteraction → 悬停 + 空闲 + 点击反馈
  *   两者通过 modelRef 共享模型实例，通过 isReady 同步状态。
  */
 function Live2DCanvas({
   modelPath,
   width,
   height,
-  streaming = false,
   onTap,
   onReady,
   onError,
@@ -76,16 +73,14 @@ function Live2DCanvas({
   const { modelRef, isReady } = useLive2DModel({
     canvas: canvasEl,
     modelPath,
-    speaking: streaming,
     onReady: stableOnReady,
   });
 
-  // 交互行为（视线跟随、悬停反应、空闲摸鱼、点击反馈）
+  // 交互行为（悬停反应、空闲摸鱼、点击反馈）
   useLive2DInteraction({
     modelRef,
     isReady,
     canvas: canvasEl,
-    speaking: streaming,
     onTap: stableOnTap,
   });
 

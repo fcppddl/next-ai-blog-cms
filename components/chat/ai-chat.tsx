@@ -837,7 +837,6 @@ export default function AIChatWidget() {
           <span className="relative block">
             <Live2DBot
               modelPath="/live2d/mao_zh-Hans/runtime/mao_pro.model3.json"
-              streaming={streaming}
               onToggle={() => setOpen((p) => !p)}
             />
           </span>
