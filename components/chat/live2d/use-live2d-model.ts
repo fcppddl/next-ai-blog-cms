@@ -8,6 +8,26 @@ import type { Live2DModel } from "pixi-live2d-display/cubism4";
 // 嘴巴参数：优先 ParamMouthOpenY（标准），回退 ParamA（日式口型）
 const MOUTH_PARAMS = ["ParamMouthOpenY", "ParamA"];
 
+// pixi-live2d-display 的 Live2DModel 类型定义未包含 getParamIndex/setParamFloat，
+// 但运行时这些方法存在。定义精确接口避免使用 Record<string, Function>
+interface ModelParamAPI {
+  getParamIndex(name: string): number;
+  setParamFloat(name: string, value: number): void;
+}
+
+/** 安全设置模型参数——参数不存在则静默忽略 */
+function trySetParam(model: Live2DModel, name: string, value: number): void {
+  try {
+    const api = model as unknown as ModelParamAPI;
+    const idx = api.getParamIndex(name);
+    if (typeof idx === "number" && idx >= 0) {
+      api.setParamFloat(name, value);
+    }
+  } catch {
+    // 参数不存在则静默忽略
+  }
+}
+
 // 加载 Cubism Core 脚本（全局唯一，避免重复加载）
 let coreLoadPromise: Promise<void> | null = null;
 
@@ -39,7 +59,6 @@ export function useLive2DModel({
   const appRef = useRef<Application | null>(null);
   const modelRef = useRef<Live2DModel | null>(null);
   const tickerRef = useRef<Ticker | null>(null);
-  const disposedRef = useRef(false);
   // 嘴巴动画相位
   const mouthPhaseRef = useRef(0);
   // 用 ref 持有 speaking/onReady，避免回调变化时重建整个模型
@@ -58,7 +77,6 @@ export function useLive2DModel({
     if (!canvas) return;
 
     const canvasEl = canvas;
-    disposedRef.current = false;
     let disposed = false;
 
     async function init() {
@@ -133,16 +151,13 @@ export function useLive2DModel({
               const mouthValue =
                 Math.abs(Math.sin(mouthPhaseRef.current)) * 0.7;
               for (const name of MOUTH_PARAMS) {
-                // getParamIndex/setParamFloat 在运行时存在，但 pixi-live2d-display 类型定义未包含
-                const idx = (model as unknown as Record<string, Function>).getParamIndex(name) as number;
-                if (idx >= 0) (model as unknown as Record<string, Function>).setParamFloat(name, mouthValue);
+                trySetParam(model, name, mouthValue);
               }
             } else {
               // 不说话时缓慢回正嘴巴
               mouthPhaseRef.current = 0;
               for (const name of MOUTH_PARAMS) {
-                const idx = (model as unknown as Record<string, Function>).getParamIndex(name) as number;
-                if (idx >= 0) (model as unknown as Record<string, Function>).setParamFloat(name, 0);
+                trySetParam(model, name, 0);
               }
             }
           } catch {
@@ -168,7 +183,6 @@ export function useLive2DModel({
     // 清理函数
     return () => {
       disposed = true;
-      disposedRef.current = true;
 
       if (tickerRef.current) {
         tickerRef.current.destroy();
